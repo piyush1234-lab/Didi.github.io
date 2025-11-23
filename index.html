@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Page title</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="contain" id="d">
+        <div id="loginform">
+        <h1>A small login setup to keep didi's Goons away</h1>
+        <p id="p1">Enter Your Username</p>
+    <input id="in2" type="text" placeholder="full name">
+    <p id="p2">Enter Code</p>
+    <div class="pwd-box">
+  <input id="pwd" type="password" placeholder="Password">
+  <label class="show-label">
+    <input type="checkbox" onclick="togglePwd()" id="showPwd"> Show
+  </label>
+  </div>
+  <button id ="btn1" onclick="login()" ontouchstart="select(btn1)" ontouchend="deselect(btn1)">proceed</button>
+    </div>
+  </div>
+</body>
+<script src="script.js"></script>
+</html>

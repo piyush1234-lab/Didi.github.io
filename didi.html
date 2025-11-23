@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Jungle Runner — Finalized (Fixed Boss Flow)</title>
+<link rel="stylesheet" href="didi.css">
+
+</head>
+<body>
+<div id="loader">
+  <!-- Replace with your game logo -->
+  <img src="character1.png" alt="Loading...">
+
+  <div class="progress"><div class="fill" id="loadFill"></div></div>
+  <p id="loadPercent">0%</p>
+</div>
+<header id="topHeader">
+  <img src="https://upload.wikimedia.org/wikipedia/commons/a/a5/Instagram_icon.png"
+       alt="Instagram" width="28" height="28" style="border-radius:6px;">
+
+  <span id="instaName" style="color:white;font-weight:700;font-size:16px;">
+    piyush___editz__
+  </span>
+</header>
+
+<div id="score">Score: 0</div>
+<button id="pauseBtn" aria-label="Pause">⏸️</button>
+
+<div id="overlayMsg" role="status" aria-live="polite">Tap / Click / Press Space to start</div>
+<button id="restartBtn">Restart</button>
+<button id="exitBtn">Exit</button>
+
+<div id="pauseMenu" role="dialog" aria-modal="true" aria-hidden="true">
+  <div style="font-weight:800;margin-bottom:6px">Paused</div>
+  <button id="resumeGame">Resume</button>
+  <button id="restartGame">Restart</button>
+  <button id="exitGame" class="exit">Exit</button>
+</div>
+
+<div id="bossHp" aria-hidden="true"><div id="bossHpInner"></div></div>
+<div id="blastOverlay" aria-hidden="true"></div>
+
+<button id="fsBtn">⛶</button>
+
+<canvas id="gameCanvas" aria-label="Jungle Runner game"></canvas>
+<script src="didi.js"></script>
+</body>
+</html>
