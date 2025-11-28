@@ -1,3 +1,15 @@
+// --- Detect Android in HTML2APK / Capacitor ---
+const isAndroid = (() => {
+    try {
+        if (window.Capacitor && Capacitor.getPlatform) {
+            return Capacitor.getPlatform() === "android";
+        }
+    } catch(e) {}
+
+    // Fallback for safety
+    return /android|capacitor/i.test(navigator.userAgent);
+})();
+
 document.addEventListener("DOMContentLoaded", () => {
     let fakePercent = 0;
     const fill = document.getElementById("loadFill");
@@ -32,7 +44,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
 (() => {
-if (!window.Android) {
+if (!isAndroid) {
 
     const loginStatus = localStorage.getItem("login");
 
@@ -45,7 +57,7 @@ if (!window.Android) {
 window.addEventListener("load", () => {
 
     // If running inside HTML2APK → window.Android exists
-    const isApp = !!window.Android;
+    const isApp = !!isAndroid;
 
     // Header visibility
     document.getElementById("topHeader").style.display = isApp ? "flex" : "none";
@@ -930,27 +942,25 @@ fsBtn.addEventListener("click", () => {
   function exitGame() {
     stopAllAudio();
 
-    // 🧹 Clear login ONLY for Web (not app)
-    if (!window.Android) {
+    // Clear login only on web
+    if (!isAndroid) {
         localStorage.removeItem("login");
     }
 
-    // 1️⃣ If inside HTML2APK → close app
-    if (window.Android && typeof Android.closeApp === "function") {
-        Android.closeApp();
+    // HTML2APK → REAL WORKING EXIT FUNCTION
+    if (isAndroid && typeof Android.exitApp === "function") {
+        Android.exitApp();
         return;
     }
 
-    // 2️⃣ If normal browser → return to homepage
+    // Browser fallback
     if (typeof window !== "undefined" && location.protocol.startsWith("http")) {
         window.location.href = "index.html";
         return;
     }
 
-    // 3️⃣ Fallback
     init(true);
 }
-
   canvas.addEventListener('pointerdown', onUserGestureStart);
   canvas.addEventListener('touchstart', (e) => { e.preventDefault(); onTouchStart(e); }, { passive: false });
   canvas.addEventListener('touchmove', (e) => { onTouchMove(e); }, { passive: true });
@@ -1013,7 +1023,7 @@ document.getElementById("topHeader").addEventListener("click", () => {
 
     // If running inside HTML2APK with Android bridge
     try {
-        if (window.Android && typeof Android.openUrl === "function") {
+        if (isAndroid && typeof Android.openUrl === "function") {
             Android.openUrl(INSTAGRAM_URL);
             return;
         }
