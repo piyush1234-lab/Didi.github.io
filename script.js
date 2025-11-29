@@ -27,7 +27,7 @@ async function login() {
 
     if (userHash === STORED_HASH) {
         localStorage.setItem("login", "true");
-        alert("soon this page will be availabe")
+        window.location.href="didi.html";
     } else {
         alert("Wrong Username or Password!");
     }
