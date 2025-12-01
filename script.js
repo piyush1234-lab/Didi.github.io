@@ -1,8 +1,28 @@
-window.addEventListener("load", () =>{
-   if (window.Android) {
-    // If running inside app → skip login and go directly to game
-    window.location.href = "didi.html";
-}
+// --- Detect Android in HTML2APK / Capacitor ---
+const isAndroid = (() => {
+    try {
+        if (window.Capacitor && Capacitor.getPlatform) {
+            return Capacitor.getPlatform() === "android";
+        }
+    } catch(e) {}
+
+    // Fallback for safety
+    return /android|capacitor/i.test(navigator.userAgent);
+})();
+
+// Detect real Android APK (NOT browser)
+const isAndroidApp = (() => {
+    try {
+        return window.Capacitor && Capacitor.isNativePlatform();
+    } catch (e) {
+        return false;
+    }
+})();
+
+window.addEventListener("load", () => {
+    if (isAndroidApp) {
+        window.location.href = "didi.html";
+    }
 });
 
 // Convert string → SHA256 hash (hex)
