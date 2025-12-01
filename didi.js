@@ -57,11 +57,10 @@ if (!isAndroid) {
 window.addEventListener("load", () => {
 
     // If running inside HTML2APK → window.Android exists
-    const isApp = !!isAndroid;
+const isApp = (window.Android && typeof Android.openUrl === "function");
 
-    // Header visibility
-    document.getElementById("topHeader").style.display = isApp ? "flex" : "none";
-
+// Only show Instagram header in app
+document.getElementById("topHeader").style.display = isApp ? "flex" : "none";
     // Fullscreen button visibility
     document.getElementById("fsBtn").style.display = isApp ? "none" : "flex";
 });
@@ -124,6 +123,21 @@ audio8.loop = true;
 const audio9 = new Audio("audio9.mp3");
 audio9.loop = true;
 
+
+function safeVibrate(pattern) {
+    try {
+        // App (WebIntoApp / HTML2APK)
+        if (isAndroid && window.Android && typeof Android.vibrate === "function") {
+            Android.vibrate(pattern.toString());
+            return;
+        }
+    } catch (e) {}
+
+    // Browser fallback
+    if (navigator.vibrate) {
+        navigator.vibrate(pattern);
+    }
+}
 
 
 /* ------------------ AUDIO HELPERS ------------------ */
@@ -561,7 +575,7 @@ ctx.ellipse(baseX, baseY, size * (1.1 + Math.sin(p.shapeOffset)*0.15), size * 0.
     for (const ob of obstacles) {
       if (!inBossPhase && collides(ob, player)) {
         safePlay(audio3);
-if (navigator.vibrate) navigator.vibrate([120, 80, 120]);
+safeVibrate([120, 80, 120]);
         rapidFadeOut(audio1);
         endGame(`Game Over — Score: ${Math.floor(score)}`);
         return;
@@ -594,7 +608,7 @@ if (navigator.vibrate) navigator.vibrate([120, 80, 120]);
   if (collides(player, boss)) {
     safePlay(audio3);   // hit sound
     safePlay(audio6);   // boss wins sound
-    if (navigator.vibrate) navigator.vibrate([200, 60, 200]);
+    safeVibrate([200, 60, 200]);
     AUDIO_BOSS_WINS();
     endGame("Boss Defeated You!");
 }
@@ -668,15 +682,12 @@ overlay.style.display = "block";
         // Start blast
        safePlay(audio7);
        AUDIO_BLAST_START();
-
-if (navigator.vibrate) {
-    navigator.vibrate([
+safeVibrate([
         320, 70,   // stronger first hit
         320, 70,   // stronger second hit
         420, 110,  // huge explosion pulse
         200        // aftershock
     ]);
-    }
 document.body.classList.add("shake-screen");
 setTimeout(() => {
     document.body.classList.remove("shake-screen");
@@ -686,7 +697,7 @@ setTimeout(() => {
             blastOverlay.style.opacity = '1';
             
         });
-fadeBackgroundImage("background1.jpg");
+fadeBackgroundImage("../assets/background1.jpg");
         // Fade out blast
         setTimeout(() => {
         
@@ -947,19 +958,22 @@ fsBtn.addEventListener("click", () => {
         localStorage.removeItem("login");
     }
 
-    // HTML2APK → REAL WORKING EXIT FUNCTION
-    if (isAndroid && typeof Android.exitApp === "function") {
-        Android.exitApp();
-        return;
+    // HTML2APK / WebIntoApp exit handling
+    if (isAndroid) {
+        try {
+            if (typeof Android.exitApp === "function") {
+                Android.exitApp();
+                return;
+            }
+            if (typeof Android.closeApp === "function") {
+                Android.closeApp();
+                return;
+            }
+        } catch(e){}
     }
 
-    // Browser fallback
-    if (typeof window !== "undefined" && location.protocol.startsWith("http")) {
-        window.location.href = "index.html";
-        return;
-    }
-
-    init(true);
+    // Web fallback
+    window.location.href = "index.html";
 }
   canvas.addEventListener('pointerdown', onUserGestureStart);
   canvas.addEventListener('touchstart', (e) => { e.preventDefault(); onTouchStart(e); }, { passive: false });
@@ -1019,17 +1033,13 @@ document.addEventListener("fullscreenchange", () => {
 const INSTAGRAM_USERNAME = "piyush___editz__";  
 const INSTAGRAM_URL = `https://www.instagram.com/piyush___editz__?igsh=MWx1aGFmaDVrdTZ0Mw==`;
 
+const isApp = (window.Android && typeof Android.openUrl === "function");
+
 document.getElementById("topHeader").addEventListener("click", () => {
-
-    // If running inside HTML2APK with Android bridge
-    try {
-        if (isAndroid && typeof Android.openUrl === "function") {
-            Android.openUrl(INSTAGRAM_URL);
-            return;
-        }
-    } catch (e) {}
-
-    // Normal browser fallback
+    if (isApp) {
+        Android.openUrl(INSTAGRAM_URL);
+        return;
+    }
     const win = window.open(INSTAGRAM_URL, "_blank");
     if (!win) location.href = INSTAGRAM_URL;
 });
