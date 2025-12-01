@@ -7,12 +7,12 @@ html,body{
 font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial;
   }
   body{
-  transition:opacity 1.5s ease;
-  background-image:url("background.jpg");
-  background-size:cover;
-  background-position:center;
-  background-repeat:no-repeat;
-  }
+  transition: opacity 1.5s ease;
+  background-image: url("background.jpg");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
   canvas{
   display:block;
   width:100%;
