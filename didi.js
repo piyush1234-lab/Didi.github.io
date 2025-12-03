@@ -1,3 +1,6 @@
+alert(navigator.userAgent);
+
+
 // ================== ENVIRONMENT DETECTION (APK vs BROWSER) ==================
 
 const UA = navigator.userAgent || "";
