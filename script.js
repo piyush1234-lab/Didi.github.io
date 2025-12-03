@@ -1,11 +1,12 @@
-// ================== APK DETECTION (WEBINTOAPP) ==================
-// Your APK user-agent is:  Dalvik/2.1.0 (...)
-// So this check is 100% reliable.
-
+// ===================== REAL APK DETECTION (100% RELIABLE) =====================
+// Your APK user-agent starts with "Dalvik/2.x.x", browser does NOT contain this.
 const UA = navigator.userAgent || "";
-const isApp = /^Dalvik\/\d+\.\d+/i.test(UA);
+const isApp = UA.startsWith("Dalvik/");
 
-// If APK → skip login fully
+
+
+// ===================== APK AUTO-LOGIN =====================
+// APK ONLY → skip login completely
 if (isApp) {
     localStorage.setItem("login", "true");
     window.location.href = "didi.html";   // go directly to game
@@ -13,17 +14,18 @@ if (isApp) {
 
 
 
-// ================== NORMAL WEB LOGIN (BROWSER ONLY) ==================
+// ===================== NORMAL WEB LOGIN =====================
 
-// Auto redirect if already logged in (browser only)
+// Browser only: Already logged in → go to game
 if (!isApp && localStorage.getItem("login") === "true") {
     window.location.href = "didi.html";
 }
 
 
 
-// ================== SHA-256 Password System ==================
+// ===================== PASSWORD SYSTEM =====================
 
+// SHA256 hash generator
 async function sha256(str) {
     const encoder = new TextEncoder();
     const data = encoder.encode(str);
@@ -33,13 +35,12 @@ async function sha256(str) {
         .join("");
 }
 
-// SHA256 of "Hindutva"
+// SHA256("Hindutva")
 const STORED_HASH =
     "63f8e09e78d3fc42982680e79141ae07bfe8a54b1064492530e84a4cee0cb8b7";
 
 async function login() {
     let pwd = document.getElementById("pwd").value;
-
     const userHash = await sha256(pwd);
 
     if (userHash === STORED_HASH) {
@@ -52,7 +53,7 @@ async function login() {
 
 
 
-// ================== UI EFFECTS ==================
+// ===================== UI EFFECTS =====================
 
 function deselect(btn) {
     btn.style.boxShadow = "none";
