@@ -1,31 +1,29 @@
-// --- Detect Android in HTML2APK / Capacitor ---
-const isAndroid = (() => {
-    try {
-        if (window.Capacitor && Capacitor.getPlatform) {
-            return Capacitor.getPlatform() === "android";
-        }
-    } catch(e) {}
+// ================== APK DETECTION (WEBINTOAPP) ==================
+// Your APK user-agent is:  Dalvik/2.1.0 (...)
+// So this check is 100% reliable.
 
-    // Fallback for safety
-    return /android|capacitor/i.test(navigator.userAgent);
-})();
+const UA = navigator.userAgent || "";
+const isApp = /^Dalvik\/\d+\.\d+/i.test(UA);
 
-// Detect real Android APK (NOT browser)
-const isAndroidApp = (() => {
-    try {
-        return window.Capacitor && Capacitor.isNativePlatform();
-    } catch (e) {
-        return false;
-    }
-})();
+// If APK → skip login fully
+if (isApp) {
+    localStorage.setItem("login", "true");
+    window.location.href = "didi.html";   // go directly to game
+}
 
-window.addEventListener("load", () => {
-    if (isAndroidApp) {
-        window.location.href = "didi.html";
-    }
-});
 
-// Convert string → SHA256 hash (hex)
+
+// ================== NORMAL WEB LOGIN (BROWSER ONLY) ==================
+
+// Auto redirect if already logged in (browser only)
+if (!isApp && localStorage.getItem("login") === "true") {
+    window.location.href = "didi.html";
+}
+
+
+
+// ================== SHA-256 Password System ==================
+
 async function sha256(str) {
     const encoder = new TextEncoder();
     const data = encoder.encode(str);
@@ -35,33 +33,37 @@ async function sha256(str) {
         .join("");
 }
 
-
-
-const STORED_HASH = "63f8e09e78d3fc42982680e79141ae07bfe8a54b1064492530e84a4cee0cb8b7"; // SHA256 of Hindutva
+// SHA256 of "Hindutva"
+const STORED_HASH =
+    "63f8e09e78d3fc42982680e79141ae07bfe8a54b1064492530e84a4cee0cb8b7";
 
 async function login() {
     let pwd = document.getElementById("pwd").value;
 
-    // Hash user input
     const userHash = await sha256(pwd);
 
     if (userHash === STORED_HASH) {
         localStorage.setItem("login", "true");
-        window.location.href="didi.html";
+        window.location.href = "didi.html";
     } else {
         alert("Wrong Username or Password!");
     }
 }
-  function deselect(btn) {
+
+
+
+// ================== UI EFFECTS ==================
+
+function deselect(btn) {
     btn.style.boxShadow = "none";
-  }
-  function select(btn){
-btn.style.boxShadow = "0px 0px 20px 10px rgba(255, 255, 255, 0.7)";}
+}
+
+function select(btn){
+    btn.style.boxShadow =
+        "0px 0px 20px 10px rgba(255, 255, 255, 0.7)";
+}
+
 function togglePwd() {
-  let pwd = document.getElementById("pwd");
-  if (pwd.type === "password") {
-    pwd.type = "text";     // Show the password
-  } else {
-    pwd.type = "password"; // Hide the password
-  }
+    let pwd = document.getElementById("pwd");
+    pwd.type = (pwd.type === "password") ? "text" : "password";
 }
