@@ -1,17 +1,18 @@
-alert(navigator.userAgent);
-
-
 // ================== ENVIRONMENT DETECTION (APK vs BROWSER) ==================
 
 const UA = navigator.userAgent || "";
 const isAndroidOS = /Android/i.test(UA);
 
-// Heuristic: Android WebView (used by WebIntoApp APK)
-// - "wv" token or "Version/x.x" usually present in WebView UA
-const isApp = isAndroidOS && (/\bwv\b/.test(UA) || /Version\/\d+\.\d+/.test(UA));
+// WebIntoApp APK WebView → UA starts with "Dalvik/..."
+const isApp = isAndroidOS && /^Dalvik\/\d+\.\d+/i.test(UA);
+// Normal browser on phone → UA starts with "Mozilla/5.0"
+const isBrowser = isAndroidOS && /Mozilla\/5\.0/i.test(UA);
+
+// (Just info, not used further, but useful if you log later)
+// console.log("UA =", UA, "isApp =", isApp, "isBrowser =", isBrowser);
 
 document.addEventListener("DOMContentLoaded", () => {
-    // -------- Loader logic (your original) --------
+    // -------- Loader logic --------
     let fakePercent = 0;
     const fill = document.getElementById("loadFill");
     const percentTxt = document.getElementById("loadPercent");
@@ -46,9 +47,9 @@ document.addEventListener("DOMContentLoaded", () => {
     const fsBtn = document.getElementById("fsBtn");
 
     if (isApp) {
-        // Inside APK (WebIntoApp)
-        if (topHeader) topHeader.style.display = "flex"; // show insta header
-        if (fsBtn) fsBtn.style.display = "none";         // hide fullscreen button
+        // Inside APK (WebIntoApp → Dalvik UA)
+        if (topHeader) topHeader.style.display = "flex";  // show insta header
+        if (fsBtn) fsBtn.style.display = "none";          // hide fullscreen button
     } else {
         // In normal browser
         if (topHeader) topHeader.style.display = "none";
@@ -116,7 +117,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function safeVibrate(pattern) {
       if (!navigator.vibrate) return;
-      // pattern can be a number or array; normalize to array
       const p = Array.isArray(pattern) ? pattern : [pattern];
       navigator.vibrate(p);
   }
@@ -541,7 +541,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function drawBullets() {
       for (const b of bullets) {
-          if (bulletImg.complete && bulletImg.naturalWidth) {
+          if (bulletImg && bulletImg.complete && bulletImg.naturalWidth) {
               ctx.drawImage(bulletImg, b.x, b.y, b.w, b.h);
           } else {
               ctx.fillStyle = "#fff";
@@ -1011,8 +1011,7 @@ document.addEventListener("DOMContentLoaded", () => {
           return;
       }
 
-      // APK (WebIntoApp): cannot really close app from JS
-      // Safest UX: go back to index/home page of your game site
+      // APK: no real close from JS → go back to main page
       window.location.href = "index.html";
   }
 
