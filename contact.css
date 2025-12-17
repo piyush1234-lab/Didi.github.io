@@ -1,0 +1,277 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial;
+}
+
+/* FULLSCREEN BACKGROUND */
+html, body {
+    height: 100%;
+    width: 100%;
+    overflow-x: hidden;
+    overflow-y: auto;
+}
+
+/* BUTTON CENTERED */
+.contact-form button {
+    background: white;
+    color: black;
+    display: block;
+    margin: 0 auto;               /* CENTER BUTTON */
+    font-weight: bold;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+/* FORM BOX */
+.contact-form {
+    background: linear-gradient(
+    135deg,
+    rgba(145, 54, 48, 0.8),
+    rgba(12, 74, 110, 0.8)
+);
+    padding: 20px;
+    border-radius: 10px;
+    backdrop-filter: blur(1px);
+    box-shadow: 0px 0px 10px 2px rgba(255, 255, 255, 0.8);
+    color: white;
+    z-index: 5;
+
+    position: relative;           /* FIXED for centering */
+    margin: auto;                 /* FIXED */
+    transform: scale(1.2);        /* Zoomed but centerable */
+}
+
+/* IMAGE INSIDE FORM */
+.contact-form img {
+    margin-top: 10px;
+    margin-bottom: 12px;
+    width: 100px;
+    border-radius: 12px;
+}
+
+/* CENTER PAGE */
+body {
+    background-image: url("background.jpg");
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    min-height: 100vh;
+    padding: 20px;
+}
+
+/* INPUT FIELDS */
+input {
+    width: 250px;
+    padding: 8px;
+    margin: 10px 0;
+    border: 1px solid white;
+    border-radius: 5px;
+    background: transparent;
+    color: white;
+    text-align: center;
+    box-shadow: 0px 0px 2px 1px rgba(255, 255, 255, 0.5);
+}
+
+/* LABEL */
+label {
+    display: inline;
+    margin-top: 10px;
+    margin-bottom: 5px;
+    font-weight:bold;
+}
+textarea {
+    width: 320px;                  /* same width as inputs */
+    padding: 8px;
+    margin: 10px 0;
+    border: 1px solid white;
+    border-radius: 5px;
+    background: transparent;
+    color: white;
+    text-align: center;            /* match other inputs */
+    box-shadow: 0px 0px 2px 1px rgba(255, 255, 255, 0.5);
+    resize: none;                  /* prevents the resize handle */
+}
+label {
+    display: block;
+    width: 100%;
+    margin-bottom: 5px;
+}
+@media (orientation: landscape) {
+    body {
+        align-items: flex-start !important;   /* allow full upward scroll */
+        padding-top: 40px;                    /* gives breathing room */
+        min-height: auto !important;          /* removes 100vh lock */
+    }
+
+    .contact-form {
+        transform: scale(1);                  /* scale down for landscape */
+        margin-top: 20px;
+    }
+}
+/* MOBILE RESPONSIVE */
+@media (max-width: 768px) {
+
+    html, body {
+        margin: 0;
+        padding: 0;
+        overflow-x: hidden;
+        box-sizing: border-box;
+    }
+
+    .contact-form {
+        padding: 15px;
+        width: 100%;
+        max-width: 350px;
+        font-size: 13px;
+        transform: scale(1);
+
+        left: 0;                  /* FIX */
+        right: 0;                 /* FIX */
+        margin: auto;             /* FIX CENTERING */
+        top: unset;               /* FIX LANDSCAPE */
+    }
+
+    .contact-form label {
+        font-size: 13px;
+    }
+
+    .contact-form input,
+    .contact-form textarea {
+        font-size: 13px;
+        padding: 6px;
+    }
+
+    .contact-form button {
+        font-size: 14px;
+        padding: 8px;
+    }
+
+    input {
+        width: 320px;
+    }
+}
+/* Popup background */
+.popup-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.55);
+  backdrop-filter: blur(6px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 999999;
+  visibility: hidden;
+  opacity: 0;
+  transition: 0.35s ease;
+}
+
+/* Visible state */
+.popup-overlay.active {
+  visibility: visible;
+  opacity: 1;
+}
+
+/* Popup box style */
+.popup-box {
+  width: 85%;
+  max-width: 330px;
+  background: rgba(255,255,255,0.15);
+  backdrop-filter: blur(18px);
+  border-radius: 20px;
+  padding: 25px 20px;
+  text-align: center;
+  color: #fff;
+  border: 1px solid rgba(255,255,255,0.35);
+  box-shadow: 0 8px 25px rgba(0,0,0,0.35);
+  transform: scale(0.75);
+  opacity: 0;
+  transition: 0.35s ease;
+}
+
+/* Animate box when popup opens */
+.popup-overlay.active .popup-box {
+  transform: scale(1);
+  opacity: 1;
+}
+
+/* Image */
+.popup-img {
+  width: 70px;
+  margin-bottom: 10px;
+}
+
+/* Title */
+.popup-title {
+  font-size: 26px;
+  margin-bottom: 5px;
+  font-weight: 700;
+}
+
+/* Message */
+.popup-message {
+  font-size: 17px;
+  opacity: 0.9;
+  margin-bottom: 5px;
+}
+
+/* Redirect text */
+.popup-redirect {
+  margin-top: 8px;
+  font-size: 15px;
+  opacity: 0.7;
+}
+.net-overlay {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0,0,0,0.55);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 999999;
+    backdrop-filter: blur(4px);
+}
+
+.net-box {
+    background: white;
+    width: 80%;
+    max-width: 300px;
+    padding: 22px 18px;
+    border-radius: 12px;
+    text-align: center;
+    color: black;
+    font-family: system-ui;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+}
+
+.net-btn {
+    margin-top: 15px;
+    padding: 9px 20px;
+    background: #2196F3;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+}
+img {
+    width:90px;
+    margin-bottom:12px;
+    display:block;
+    margin-left:auto;
+    margin-right:auto;
+}

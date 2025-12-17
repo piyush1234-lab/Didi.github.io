@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>suggestion page</title>
+  <link rel="stylesheet" href="contact.css">
+</head>
+<body>
+
+<main>
+
+  <div class="contact-form">
+
+      <!-- Hidden iframe for silent FormSubmit -->
+      <iframe name="hiddenFrame" style="display:none;"></iframe>
+      <form id="contact"
+            action="https://getform.io/f/bwnydyoa"
+            method="post"
+            target="hiddenFrame">
+
+          <img src="character1.png"
+               alt="Logo">
+
+          <h3 style="font-weight:700; margin:10px 0px; text-align:center">
+              Fill In The Information
+          </h3>
+
+          <label for="name">Name - </label>
+          <input id="name" name="name" type="text" onfocus="inpu(this)" onblur="deinpu(this)"><br>
+
+          <label for="phone">Phone - </label>
+          <input id="phone" name="phone" type="tel" maxlength="10" onfocus="inpu(this)" onblur="deinpu(this)"><br>
+
+          <label for="email">Email - </label>
+          <input id="email" name="email" type="email" onfocus="inpu(this)" onblur="deinpu(this)"><br>
+
+          <label for="feedback">Feedback - </label>
+          <textarea id="feedback" name="feedback" rows="3" type="text" onfocus="inpu(this)" onblur="deinpu(this)"></textarea><br>
+
+          <!-- HIDDEN FIELDS -->
+          <input type="hidden" name="_captcha" value="false">
+          <input type="hidden" name="_subject" value="New feedback arrived">
+
+          <button type="submit"
+                  onmouseover="shad(this)"
+                  ontouchstart="shad(this)"
+                  onmouseout="deshad(this)"
+                  ontouchend="deshad(this)"
+                  onclick="deshad1(this); return validation(event);">
+              Submit
+          </button>
+
+      </form>
+  </div> <!-- contact-form -->
+
+</main>
+
+<!-- SUCCESS POPUP -->
+<div id="successPopup" class="popup-overlay">
+  <div class="popup-box">
+      
+      <img src="../assets/character1.png" class="popup-img">
+
+      <h2 class="popup-title">Thank You!</h2>
+
+      <p class="popup-message">
+        Your feedback has been submitted successfully.
+      </p>
+
+      <p class="popup-redirect">Redirecting...</p>
+
+  </div>
+</div>
+<!-- INTERNET POPUP (MULTI-MODE) -->
+<div id="netPopup" class="net-overlay">
+  <div class="net-box">
+      <h3 id="netTitle">No Internet</h3>
+      <p id="netMsg">Internet is OFF. Please turn it ON.</p>
+
+      <button id="netOkBtn" class="net-btn">OK</button>
+  </div>
+</div>
+<script src="contact.js"></script>
+
+</body>
+</html>
