@@ -115,12 +115,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (!isApp) {
         // Inside APK (WebIntoApp → Dalvik UA)
-        if (topHeader) topHeader.style.display = "flex";  // show insta header
-        if (fsBtn) fsBtn.style.display = "none";          // hide fullscreen button
+        if (topHeader) topHeader.style.display = "none";  // hide insta header
+        if (fsBtn) fsBtn.style.display = "flex";          // show fullscreen button
     } else {
         // In normal browser
-        if (topHeader) topHeader.style.display = "none";
-        if (fsBtn) fsBtn.style.display = "flex";
+        if (topHeader) topHeader.style.display = "flex";
+        if (fsBtn) fsBtn.style.display = "none";
     }
 });
 // ================== GAME CODE ==================
