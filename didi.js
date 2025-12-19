@@ -1,83 +1,102 @@
-// === PLATFORM DETECTION == //
+// ================== PLATFORM DETECTION ==================
 const UA = navigator.userAgent || "";
 const isApp = UA.startsWith("Dalvik/");     // APK
 const isBrowser = /Mozilla\/5\.0/.test(UA); // Normal browser
 const FORCE_POPUP_DEBUG = false;
-// == VIBRATION TEST == //
-if (!isApp && new URLSearchParams(location.search).get("from") === "apk") {
-    localStorage.setItem("login", "true");
- // Clean URL + remove history
-    location.replace("didi.html");
+
+// ================== VIBRATION TEST ==================
+// ================== VIBRATION TEST (NO USER GESTURE REQUIRED) ==================
+// ================== VIBRATION TEST (NO USER ACTION REQUIRED) ==================
+function testVibration() {
+    return new Promise(resolve => {
+
+        // If vibrate API missing → fail
+        if (!navigator.vibrate) {
+            resolve(false);
+            return;
+        }
+
+        let result = false;
+
+        try {
+            // Try scheduling a vibration
+            result = navigator.vibrate([5, 5, 5]);
+        } catch (e) {
+            resolve(false);
+            return;
+        }
+
+        // Wait briefly to confirm the API runs
+        setTimeout(() => {
+            resolve(result === true);
+        }, 40);
+    });
 }
-function realVibrationWorks() {
-// If inside APK → treat as vibration NOT working
-    if (isApp) return false;
-    
-// If no vibration API → fail
-    if (!navigator.vibrate) return false;
-    
-// Chrome always returns undefined, so we treat API presence as success
-    return true;
-}
-// == SHOW POPUP AFTER LOADER IF VIBRATION FAILS == //
-let vibrationChecked = false;
+     
+   
+// ================== SHOW POPUP AFTER LOADER IF VIBRATION FAILS ==================
+window.addEventListener("load", () => {
+    setTimeout(async () => {
 
-function showVibrationPopup() {
+        const works = await testVibration();
 
-    if (vibrationChecked) return;
-    vibrationChecked = true;
+        // If vibration works → do NOT show popup
+        if (works) return;
 
-    const works = realVibrationWorks();
-    if (works) return; // No popup if vibrate works
+        // If vibration fails → show popup for both APK + Web
+        const box = document.getElementById("apkVibrationPopup");
+        const txt = document.getElementById("apkVibText");
+        const okBtn = document.getElementById("apkVibOK");
+        const cancelBtn = document.getElementById("apkVibCancel");
 
-    const box = document.getElementById("apkVibrationPopup");
-    const txt = document.getElementById("apkVibText");
-    const okBtn = document.getElementById("apkVibOK");
-    const cancelBtn = document.getElementById("apkVibCancel");
+        // Platform detection
+        const UA = navigator.userAgent || "";
+        const isApp = UA.startsWith("Dalvik/");
+        const isBrowser = /Mozilla\/5\.0/.test(UA);
 
-  if (isApp) {
-        // --- APK MODE (OK + Cancel)
-        txt.innerHTML = `
-            Vibration is not working on the app in this device <br>
-            For best performance Do you want to continue in browser ?
-        `;
+        // Message for APP vs WEB
+        if (isApp) {
+            txt.innerHTML = `
+                Vibration is not working on this device.<br>
+                For best gameplay do you want to continue in browser?
+            `;
+        } else {
+            txt.innerHTML = `
+                Your browser does not support vibration.<br>
+                For full experience you may use the APK version.
+            `;
+        }
 
-        okBtn.style.display = "inline-block";
-        cancelBtn.style.display = "inline-block";
+        box.style.display = "flex";
 
+
+        // ================== OK BUTTON ==================
         okBtn.onclick = () => {
-            const url = "didi.html";
 
-            try {
-                if (window.Android && Android.openUrl) {
-                    Android.openUrl(url);
-                    return;
-                }
-            } catch (e){}
+            if (isApp) {
+                const url = "https://yourwebsite.com/didi.html?apk=1";
 
-            location.replace("didi.html");
+                try {
+                    if (window.Android && Android.openUrl) {
+                        Android.openUrl(url);
+                        return;
+                    }
+                } catch (e) {}
+
+                window.location.href = url;
+            }
+
+            if (isBrowser) {
+                window.location.href = "https://yourwebsite.com/apk-download";
+            }
         };
-
+// ================== CANCEL BUTTON ==================
         cancelBtn.onclick = () => {
             box.style.display = "none";
         };
 
-    } else {
-        // --- WEB MODE (ONLY OK button)
-        txt.innerHTML = `
-        Your browser does not support vibration.`;
-
-        okBtn.style.display = "inline-block";      // show OK
-        cancelBtn.style.display = "none";          // hide Cancel
-
-        // OK simply closes popup and game continues
-        okBtn.onclick = () => {
-            box.style.display = "none";
-        };
-    }
-
-    box.style.display = "flex";
-}
+    }, 900); // after loader finishes
+});
 document.addEventListener("DOMContentLoaded", () => {
     // -------- Loader logic --------
     let fakePercent = 0;
@@ -113,41 +132,29 @@ document.addEventListener("DOMContentLoaded", () => {
     const topHeader = document.getElementById("topHeader");
     const fsBtn = document.getElementById("fsBtn");
 
-    if (!isApp) {
+    if (isApp) {
         // Inside APK (WebIntoApp → Dalvik UA)
-        if (topHeader) topHeader.style.display = "none";  // hide insta header
-        if (fsBtn) fsBtn.style.display = "flex";          // show fullscreen button
+        if (topHeader) topHeader.style.display = "flex";  // show insta header
+        if (fsBtn) fsBtn.style.display = "none";          // hide fullscreen button
     } else {
         // In normal browser
-        if (topHeader) topHeader.style.display = "flex";
-        if (fsBtn) fsBtn.style.display = "none";
+        if (topHeader) topHeader.style.display = "none";
+        if (fsBtn) fsBtn.style.display = "flex";
     }
 });
+
+
 // ================== GAME CODE ==================
 (() => {
 
   // -------- LOGIN CHECK: only for WEB, not APK --------
   if (!isApp) {
-    const loginStatus = localStorage.getItem("login");
-    if (loginStatus !== "true") {
-        location.replace("index.html");
-    }
-}
-// ================== WEB-ONLY BACK BUTTON CONTROL ==================
-if (isBrowser) {
+      const loginStatus = localStorage.getItem("login");
+      if (loginStatus !== "true") {
+          window.location.href = "index.html";
+      }
+  }
 
-    // Push fake state so back button triggers popstate
-    history.pushState(null, "", location.href);
-
-    window.addEventListener("popstate", () => {
-
-        // Clear login so didi.html can't reopen
-        localStorage.removeItem("login");
-
-        // Replace history → no way back to didi.html
-        location.replace("index.html");
-    });
-}
   // -------- Elements --------
   const canvas = document.getElementById('gameCanvas');
   const ctx = canvas.getContext('2d');
@@ -189,10 +196,10 @@ if (isBrowser) {
   audio8.loop = true;
 
   const audio9 = new Audio("audio9.mp3");  // calm post blast
-  audio9.loop = false;
+  audio9.loop = true;
 
 
-  /* ---- VIBRATION ---- */
+  /* ------------------ VIBRATION (navigator.vibrate ONLY) ------------------ */
 
   function safeVibrate(pattern) {
       if (!navigator.vibrate) return;
@@ -200,7 +207,8 @@ if (isBrowser) {
       navigator.vibrate(p);
   }
 
- /* ------------------ AUDIO HELPERS ------------------ */
+
+  /* ------------------ AUDIO HELPERS ------------------ */
 
   function safePlay(a) {
       const p = a.play();
@@ -283,13 +291,9 @@ if (isBrowser) {
       audio8.currentTime = 0;
       safePlay(audio8);
   }
-function AUDIO_JUMP(){
-    audio2.volume = 0.03;
-    safePlay(audio2);
-}
+
   function AUDIO_AFTER_BLAST_MESSAGE() {
       audio8.pause();
-      audio9.pause();
       audio8.currentTime = 0;
       audio9.currentTime = 0;
       audio9.volume = 0.6;
@@ -302,7 +306,9 @@ function AUDIO_JUMP(){
       audio1.volume = 0.05;
       safePlay(audio1);
   }
- /* ------------------ IMAGES ------------------ */
+
+  /* ------------------ IMAGES ------------------ */
+
   const groundImg = new Image(); groundImg.src = "ground.jpg";
   const playerImg = new Image(); playerImg.src = "character.png";
   const obstacleImg = new Image(); obstacleImg.src = "obstacle.png";
@@ -311,6 +317,7 @@ function AUDIO_JUMP(){
   const bgImg = new Image(); bgImg.src = "background.png";
 
   /* ------------------ GAME STATE ------------------ */
+
   let width = innerWidth,
       height = innerHeight,
       deviceRatio = Math.max(1, window.devicePixelRatio || 1);
@@ -336,7 +343,7 @@ function AUDIO_JUMP(){
 
   /* ------------------ DUST PARTICLES ------------------ */
 
-function spawnDust(x, y) {
+  function spawnDust(x, y) {
       const angle = (Math.random() * 0.6) - 0.3;
       dustParticles.push({
           x,
@@ -393,51 +400,39 @@ function spawnDust(x, y) {
   }
 
   function resize() {
+      width = window.innerWidth;
+      height = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+      deviceRatio = Math.max(1, window.devicePixelRatio || 1);
 
-    // Use visualViewport height if available (prevents keyboard shrinking issue)
-    let safeH = window.innerHeight;
+      canvas.style.width = width + "px";
+      canvas.style.height = height + "px";
+      canvas.width = Math.floor(width * deviceRatio);
+      canvas.height = Math.floor(height * deviceRatio);
+      ctx.setTransform(deviceRatio, 0, 0, deviceRatio, 0, 0);
 
-    if (window.visualViewport && window.visualViewport.height > 200) {
-        safeH = window.visualViewport.height;
-    }
+      visualScale = Math.min(width, Math.max(560, height)) / 900;
+      groundHeight = Math.max(70, 90 * visualScale);
 
-    height = safeH;
-    width = window.innerWidth;
+      if (player) {
+          const gY = getGroundY();
+          if (player.y + player.h > gY) {
+              player.y = gY - player.h;
+              player.vy = 0;
+              player.grounded = true;
+          }
+      }
 
-    deviceRatio = Math.max(1, window.devicePixelRatio || 1);
+      for (let ob of obstacles) {
+          ob.w = Math.max(28, 40 * visualScale * (width < height ? 1 : 0.9));
+          const MAX_H = 80 * visualScale;
+          const MIN_H = 35 * visualScale;
+          ob.h = MIN_H + Math.random() * (MAX_H - MIN_H);
+          ob.y = getGroundY() - ob.h;
+      }
+  }
 
-    // Canvas scaling
-    canvas.style.width = width + "px";
-    canvas.style.height = height + "px";
-    canvas.width = Math.floor(width * deviceRatio);
-    canvas.height = Math.floor(height * deviceRatio);
-    ctx.setTransform(deviceRatio, 0, 0, deviceRatio, 0, 0);
+  /* ------------------ INIT GAME ------------------ */
 
-    // Visual scale based on real screen
-    visualScale = Math.min(width, Math.max(560, height)) / 900;
-    groundHeight = Math.max(70, 90 * visualScale);
-
-    // Fix player grounding when resized
-    if (player) {
-        const gY = getGroundY();
-        if (player.y + player.h > gY) {
-            player.y = gY - player.h;
-            player.vy = 0;
-            player.grounded = true;
-        }
-    }
-
-    // Recalculate obstacle sizes
-    for (let ob of obstacles) {
-        ob.w = Math.max(28, 40 * visualScale * (width < height ? 1 : 0.9));
-
-        const MAX_H = 80 * visualScale;
-        const MIN_H = 35 * visualScale;
-
-        ob.h = MIN_H + Math.random() * (MAX_H - MIN_H);
-        ob.y = getGroundY() - ob.h;
-    }
-}
   function init(fullReset = true) {
       resize();
       player = {
@@ -484,7 +479,10 @@ function spawnDust(x, y) {
 
       updateScoreDisplay();
 
-      if (!rafId) rafId = requestAnimationFrame(loop);
+      if (!rafId) {
+    lastTime = performance.now();
+    rafId = requestAnimationFrame(loop);
+}
   }
 
   /* ------------------ SPAWN OBSTACLES ------------------ */
@@ -526,7 +524,7 @@ function spawnDust(x, y) {
       if (player.grounded) {
           player.vy = -player.jumpPower;
           player.grounded = false;
-          AUDIO_JUMP();
+          safePlay(audio2);
       }
   }
 
@@ -725,7 +723,7 @@ function spawnDust(x, y) {
           safePlay(audio6);
           safeVibrate([200, 60, 200]);
           AUDIO_BOSS_WINS();
-          endGame("Didi's Game Is Over");
+          endGame("Boss Defeated You!");
       }
   }
 
@@ -783,7 +781,7 @@ function spawnDust(x, y) {
           overlay.style.border = "2px solid rgba(255,120,0,1)";
           overlay.style.zIndex = "999999999999";
           overlay.style.boxShadow = "0 0 20px rgba(255,140,0,1)";
-          overlay.textContent = "A Terror Atack Taken Place By Didi's Vote Bank";
+          overlay.textContent = "YOUR MESSAGE 2";
           overlay.style.display = "block";
 
           safePlay(audio7);
@@ -794,7 +792,8 @@ function spawnDust(x, y) {
               420, 110,
               200
           ]);
-document.body.classList.add("shake-screen");
+
+          document.body.classList.add("shake-screen");
           setTimeout(() => {
               document.body.classList.remove("shake-screen");
           }, 400);
@@ -804,7 +803,7 @@ document.body.classList.add("shake-screen");
               blastOverlay.style.opacity = '1';
           });
 
-          fadeBackgroundImage("background1.jpg");
+          fadeBackgroundImage("../assets/background1.jpg");
 
           setTimeout(() => {
               blastOverlay.style.opacity = '0';
@@ -822,17 +821,19 @@ document.body.classList.add("shake-screen");
                   overlay.style.letterSpacing = "0px";
                   overlay.style.fontWeight = "600";
                   overlay.style.zIndex = "999";
-                  overlay.textContent = "You Are Now In Heaven 💀💀";
+                  overlay.textContent = "YOUR MESSAGE 3";
 
                   restartBtn.style.display = 'block';
                   exitBtn.style.display = 'block';
                   AUDIO_AFTER_BLAST_MESSAGE();
               }, 1000);
           }, 1500);
-      }, 14000);
+      }, 2500);
   }
-/* ------------------ BOSS INTRO SEQUENCE ------------------ */
-function startBossSequence() {
+
+  /* ------------------ BOSS INTRO SEQUENCE ------------------ */
+
+  function startBossSequence() {
       if (bossIntro || inBossPhase || gameOver) return;
 
       bossIntro = true;
@@ -902,14 +903,16 @@ function startBossSequence() {
               fsBtn.textContent = "⛶";
           }
       });
-  document.addEventListener("fullscreenchange", () => {
+
+      document.addEventListener("fullscreenchange", () => {
           fsBtn.textContent = document.fullscreenElement ? "⤢" : "⛶";
       });
   }
- /* ------------------ MAIN LOOP ------------------ */
+
+  /* ------------------ MAIN LOOP ------------------ */
 
   function update(now) {
-      rafId = requestAnimationFrame(loop);
+      
       const delta = now - lastTime;
       lastTime = now;
 
@@ -971,13 +974,18 @@ function startBossSequence() {
   }
 
   function loop(now) {
-      update(now);
-  }
+    if (!running && !paused && gameOver) {
+        rafId = null;
+        return;
+    }
+
+    rafId = requestAnimationFrame(loop);
+    update(now);
+}
 
   /* ------------------ INPUT HANDLING ------------------ */
 
   function onUserGestureStart() {
-  showVibrationPopup();
       userGestureDone = true;
 
       audio9.volume = 0;
@@ -1037,22 +1045,26 @@ function startBossSequence() {
       touchStartY = null;
   }
 
-  function togglePause(show) {
-      if (gameOver) return;
+ function togglePause(show) {
+    if (gameOver) return;
 
-      paused = show;
-      pauseMenu.style.display = show ? 'block' : 'none';
-      pauseMenu.setAttribute('aria-hidden', String(!show));
+    paused = show;
+    pauseMenu.style.display = show ? 'block' : 'none';
+    pauseMenu.setAttribute('aria-hidden', String(!show));
 
-      if (show) {
-          try { audio1.pause(); } catch (e) {}
-          overlay.style.display = 'none';
-      } else {
-          overlay.style.display = 'none';
-          if (userGestureDone) safePlay(audio1);
-          lastTime = performance.now();
-      }
-  }
+    if (show) {
+        try { audio1.pause(); } catch (e) {}
+    } else {
+        lastTime = performance.now();
+        running = true;
+
+        if (userGestureDone) safePlay(audio1);
+
+        if (!rafId) {
+            rafId = requestAnimationFrame(loop);
+        }
+    }
+}
 
   /* ------------------ UI BUTTON BINDINGS ------------------ */
 
@@ -1094,7 +1106,7 @@ function startBossSequence() {
       if (!isApp) {
           // Web: clear login and go back
           localStorage.removeItem("login");
-          location.replace("index.html");
+          window.location.href = "index.html";
           return;
       }
 
@@ -1130,13 +1142,22 @@ function startBossSequence() {
   });
 
   document.addEventListener('visibilitychange', () => {
-      if (document.hidden && running && !paused) stopAllAudio();
-      togglePause(true);
-  });
-
-  window.addEventListener('pagehide', () => {
-      if (rafId) cancelAnimationFrame(rafId);
-  });
+    if (document.hidden) {
+        if (running && !paused) {
+            togglePause(true);
+        }
+    } else {
+        // page visible again
+        lastTime = performance.now();
+    }
+});
+  
+window.addEventListener('pagehide', () => {
+    if (rafId) {
+        cancelAnimationFrame(rafId);
+        rafId = null;   // IMPORTANT
+    }
+});
 
   window.addEventListener('focus', () => {
       lastTime = performance.now();
@@ -1174,7 +1195,16 @@ function startBossSequence() {
           if (!win) location.href = INSTAGRAM_URL;
       });
   }
+
+window.addEventListener('pageshow', (e) => {
+    lastTime = performance.now();
+
+    if (e.persisted || !rafId) {
+        rafId = requestAnimationFrame(loop);
+    }
+});
 })(); // end IIFE
+
 let panelOpened = false;
 
 const slidePanel = document.getElementById("slidePanel");
@@ -1199,6 +1229,6 @@ slideTab.addEventListener("click", (e) => {
 // CONTENT CLICK → redirect ONLY when open
 slideContent.addEventListener("click", () => {
     if (panelOpened) {
-        window.location.href ="contact.html" ;
+        window.location.href = redirectURL;
     }
 });
