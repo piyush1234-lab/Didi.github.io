@@ -4,8 +4,6 @@ const isApp = UA.startsWith("Dalvik/");     // APK
 const isBrowser = /Mozilla\/5\.0/.test(UA); // Normal browser
 const FORCE_POPUP_DEBUG = false;
 
-// ================== VIBRATION TEST ==================
-// ================== VIBRATION TEST (NO USER GESTURE REQUIRED) ==================
 // ================== VIBRATION TEST (NO USER ACTION REQUIRED) ==================
 function testVibration() {
     return new Promise(resolve => {
@@ -32,8 +30,7 @@ function testVibration() {
         }, 40);
     });
 }
-     
-   
+
 // ================== SHOW POPUP AFTER LOADER IF VIBRATION FAILS ==================
 window.addEventListener("load", () => {
     setTimeout(async () => {
@@ -55,47 +52,51 @@ window.addEventListener("load", () => {
         const isBrowser = /Mozilla\/5\.0/.test(UA);
 
         // Message for APP vs WEB
-        if (isApp) {
-            txt.innerHTML = `
-                Vibration is not working on this device.<br>
-                For best gameplay do you want to continue in browser?
-            `;
-        } else {
-            txt.innerHTML = `
-                Your browser does not support vibration.<br>
-                For full experience you may use the APK version.
-            `;
-        }
+        // ---------- Message ----------
+if (isApp) {
+    txt.innerHTML = `
+        Vibration is not working on this device.<br>
+        For best gameplay, do you want to continue in browser?
+    `;
+    cancelBtn.style.display = "inline-flex";
+} else {
+    txt.innerHTML = `
+        Your browser does not support vibration.<br>
+        Click OK to continue without vibration.
+    `;
+    cancelBtn.style.display = "none";
+}
 
-        box.style.display = "flex";
+// Show popup
+box.style.display = "flex";
 
+// ---------- OK BUTTON ----------
+okBtn.onclick = () => {
 
-        // ================== OK BUTTON ==================
-        okBtn.onclick = () => {
+    // APK → redirect to browser
+    if (isApp) {
+        const url = "https://piyush1234-lab.github.io/Didi.github.io/didi.html?apk=1";
 
-            if (isApp) {
-                const url = "https://yourwebsite.com/didi.html?apk=1";
-
-                try {
-                    if (window.Android && Android.openUrl) {
-                        Android.openUrl(url);
-                        return;
-                    }
-                } catch (e) {}
-
-                window.location.href = url;
+        try {
+            if (window.Android && Android.openUrl) {
+                Android.openUrl(url);
+                return;
             }
+        } catch (e) {}
 
-            if (isBrowser) {
-                window.location.href = "https://yourwebsite.com/apk-download";
-            }
-        };
-// ================== CANCEL BUTTON ==================
-        cancelBtn.onclick = () => {
-            box.style.display = "none";
-        };
+        window.location.href = url;
+        return;
+    }
 
-    }, 900); // after loader finishes
+    // Browser → continue without vibration
+    box.style.display = "none";
+};
+
+// ---------- CANCEL BUTTON ----------
+cancelBtn.onclick = () => {
+    box.style.display = "none";
+};
+    }, 10000); // after loader finishes
 });
 document.addEventListener("DOMContentLoaded", () => {
     // -------- Loader logic --------
@@ -912,7 +913,7 @@ document.addEventListener("DOMContentLoaded", () => {
   /* ------------------ MAIN LOOP ------------------ */
 
   function update(now) {
-      
+
       const delta = now - lastTime;
       lastTime = now;
 
@@ -1103,12 +1104,28 @@ document.addEventListener("DOMContentLoaded", () => {
   function exitGame() {
       stopAllAudio();
 
-      if (!isApp) {
+      if (isBrowser) {
           // Web: clear login and go back
           localStorage.removeItem("login");
-          window.location.href = "index.html";
+          window.location.replace("index.html");
           return;
       }
+
+// ================== WEB BACK BUTTON = EXIT ==================
+if (isBrowser) {
+    history.pushState({ panel: false }, "");
+
+    window.addEventListener("popstate", () => {
+        if (panelOpened) {
+            closeSlidePanel();
+            history.pushState({ panel: false }, "");
+            return;
+        }
+
+        // otherwise exit page normally
+        exitGame();
+    });
+}
 
       // APK: no real close from JS → go back to main page
       window.location.href = "index.html";
@@ -1151,7 +1168,7 @@ document.addEventListener("DOMContentLoaded", () => {
         lastTime = performance.now();
     }
 });
-  
+
 window.addEventListener('pagehide', () => {
     if (rafId) {
         cancelAnimationFrame(rafId);
@@ -1205,27 +1222,54 @@ window.addEventListener('pageshow', (e) => {
 });
 })(); // end IIFE
 
+function closeSlidePanel() {
+    slidePanel.classList.remove("open");
+    panelOpened = false;
+}
+
 let panelOpened = false;
 
 const slidePanel = document.getElementById("slidePanel");
 const slideTab = document.getElementById("slideTab");
 const slideContent = document.getElementById("slideContent");
 
-const redirectURL = "https://piyush1234-lab.github.io/Didi.github.io/";
+const redirectURL = "contact.html";
 
 // TAB CLICK → open/close ONLY
 slideTab.addEventListener("click", (e) => {
-    e.stopPropagation(); // prevent triggering content click
+    e.stopPropagation();
 
-    if (!panelOpened) {
+    if (panelOpened) {
+        closeSlidePanel();
+    } else {
         slidePanel.classList.add("open");
         panelOpened = true;
-    } else {
-        slidePanel.classList.remove("open");
-        panelOpened = false;
     }
 });
+document.addEventListener("click", () => {
+    if (panelOpened) {
+        closeSlidePanel();
+    }
+});
+slidePanel.addEventListener("click", (e) => {
+    e.stopPropagation();
+});
+slideContent.addEventListener("click", () => {
+    if (!panelOpened) return;
 
+    closeSlidePanel();
+    window.location.href = redirectURL;
+});
+document.addEventListener("visibilitychange", () => {
+    if (document.hidden && panelOpened) {
+        closeSlidePanel();
+    }
+});
+window.addEventListener("pagehide", () => {
+    if (panelOpened) {
+        closeSlidePanel();
+    }
+});
 // CONTENT CLICK → redirect ONLY when open
 slideContent.addEventListener("click", () => {
     if (panelOpened) {
