@@ -194,10 +194,10 @@ document.addEventListener("DOMContentLoaded", () => {
   const audio7 = new Audio("audio7.mp3");  // character wins
 
   const audio8 = new Audio("audio8.mp3");  // blast ambience
-  audio8.loop = true;
+  audio8.loop = false;
 
   const audio9 = new Audio("audio9.mp3");  // calm post blast
-  audio9.loop = true;
+  audio9.loop = false;
 
 
   /* ------------------ VIBRATION (navigator.vibrate ONLY) ------------------ */
@@ -724,7 +724,7 @@ document.addEventListener("DOMContentLoaded", () => {
           safePlay(audio6);
           safeVibrate([200, 60, 200]);
           AUDIO_BOSS_WINS();
-          endGame("Boss Defeated You!");
+          endGame("U Can't Ever Defeat Modi Even In Game Also");
       }
   }
 
@@ -782,7 +782,7 @@ document.addEventListener("DOMContentLoaded", () => {
           overlay.style.border = "2px solid rgba(255,120,0,1)";
           overlay.style.zIndex = "999999999999";
           overlay.style.boxShadow = "0 0 20px rgba(255,140,0,1)";
-          overlay.textContent = "YOUR MESSAGE 2";
+          overlay.textContent = "A Terror Attack Taken Place";
           overlay.style.display = "block";
 
           safePlay(audio7);
@@ -804,7 +804,7 @@ document.addEventListener("DOMContentLoaded", () => {
               blastOverlay.style.opacity = '1';
           });
 
-          fadeBackgroundImage("../assets/background1.jpg");
+          fadeBackgroundImage("background1.jpg");
 
           setTimeout(() => {
               blastOverlay.style.opacity = '0';
@@ -822,14 +822,14 @@ document.addEventListener("DOMContentLoaded", () => {
                   overlay.style.letterSpacing = "0px";
                   overlay.style.fontWeight = "600";
                   overlay.style.zIndex = "999";
-                  overlay.textContent = "YOUR MESSAGE 3";
+                  overlay.textContent = "Didi's Vote Bank Has Destroyed India";
 
                   restartBtn.style.display = 'block';
                   exitBtn.style.display = 'block';
                   AUDIO_AFTER_BLAST_MESSAGE();
               }, 1000);
-          }, 1500);
-      }, 2500);
+          }, 3000);
+      }, 12000);
   }
 
   /* ------------------ BOSS INTRO SEQUENCE ------------------ */
@@ -1219,6 +1219,65 @@ window.addEventListener('pageshow', (e) => {
     if (e.persisted || !rafId) {
         rafId = requestAnimationFrame(loop);
     }
+    let hiddenAt = null;
+let autoExitTimer = null;
+
+const AUTO_EXIT_DELAY = 2 * 60 * 1000; // 2 minutes
+function startAutoExitCountdown() {
+    if (autoExitTimer) return;
+
+    hiddenAt = Date.now();
+
+    autoExitTimer = setTimeout(() => {
+
+        stopAllAudio();
+        exitGame(); // existing function
+
+    }, AUTO_EXIT_DELAY);
+}
+
+function cancelAutoExitCountdown() {
+    if (autoExitTimer) {
+        clearTimeout(autoExitTimer);
+        autoExitTimer = null;
+    }
+    hiddenAt = null;
+}
+document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+
+        // Start 2-minute auto-exit timer
+        startAutoExitCountdown();
+
+        // Existing behavior (pause + stop audio)
+        if (running && !paused) {
+            togglePause(true);
+        }
+
+    } else {
+        // Page visible again → cancel auto-exit
+        cancelAutoExitCountdown();
+        lastTime = performance.now();
+    }
+});
+window.addEventListener('pagehide', () => {
+
+    // Treat pagehide as hidden → start countdown
+    startAutoExitCountdown();
+
+    if (rafId) {
+        cancelAnimationFrame(rafId);
+        rafId = null;
+    }
+});
+window.addEventListener('pageshow', (e) => {
+    cancelAutoExitCountdown();
+    lastTime = performance.now();
+
+    if (e.persisted || !rafId) {
+        rafId = requestAnimationFrame(loop);
+    }
+});
 });
 })(); // end IIFE
 
