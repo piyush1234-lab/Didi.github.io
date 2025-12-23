@@ -181,6 +181,8 @@ document.addEventListener("DOMContentLoaded", () => {
   audio1.volume = 0.05;
 
   const audio2 = new Audio("audio2.wav");  // jump
+audio2.volume = 0.03;
+
   const audio3 = new Audio("audio3.wav");  // hit obstacle
 
   const audio4 = new Audio("audio4.mp3");  // boss warning
