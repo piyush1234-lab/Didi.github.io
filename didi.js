@@ -181,6 +181,7 @@ document.addEventListener("DOMContentLoaded", () => {
   audio1.volume = 0.05;
 
   const audio2 = new Audio("audio2.wav");  // jump
+  audio2.volume = 0.03;
   const audio3 = new Audio("audio3.wav");  // hit obstacle
 
   const audio4 = new Audio("audio4.mp3");  // boss warning
@@ -243,14 +244,41 @@ document.addEventListener("DOMContentLoaded", () => {
       }, 50);
   }
 
-  function stopAllAudio() {
-      [audio1, audio2, audio3, audio4, audio5, audio6, audio7, audio8, audio9].forEach(a => {
-          try {
-              a.pause();
-              a.currentTime = 0;
-          } catch (e) {}
-      });
-  }
+  function pauseAllAudio() {
+    [audio1, audio2, audio3, audio4, audio5, audio6, audio7, audio8, audio9]
+        .forEach(a => {
+            try { a.pause(); } catch (e) {}
+        });
+}
+
+function togglePause(show) {
+    if (gameOver) return;
+
+    paused = show;
+    pauseMenu.style.display = show ? 'block' : 'none';
+
+    if (show) {
+        // ⏸ PAUSE
+        cancelJumpHint(false); // preserve remaining hint time
+        pauseAllAudio();
+
+    } else {
+        // ▶ RESUME
+        lastTime = performance.now();
+        running = true;
+
+        if (userGestureDone) safePlay(audio1);
+
+        // Resume tutorial ONLY if time remains
+        if (hintRemaining > 0 && !gameOver) {
+            showJumpHint();
+        }
+
+        if (!rafId) {
+            rafId = requestAnimationFrame(loop);
+        }
+    }
+}
 
   /* ------------------ AUDIO TIMELINE HOOKS ------------------ */
 
@@ -324,7 +352,7 @@ document.addEventListener("DOMContentLoaded", () => {
       deviceRatio = Math.max(1, window.devicePixelRatio || 1);
   let visualScale = 1;
   let groundHeight = 90;
-
+  let groundOffset=0;
   let running = false, paused = false, started = false, userGestureDone = false;
   let score = 0;
   let lastTime = performance.now(), rafId = null;
@@ -341,6 +369,10 @@ document.addEventListener("DOMContentLoaded", () => {
   let boss = null, bossIntro = false, inBossPhase = false, allowObstacles = true;
 
   let gameOver = false;
+  // ----- Jump hint control -----
+let hintTimeout = null;
+let hintFadeTimeout = null;
+let hintActive = false;
 
   /* ------------------ DUST PARTICLES ------------------ */
 
@@ -435,6 +467,7 @@ document.addEventListener("DOMContentLoaded", () => {
   /* ------------------ INIT GAME ------------------ */
 
   function init(fullReset = true) {
+  cancelJumpHint();
       resize();
       player = {
           x: 90 * visualScale,
@@ -456,6 +489,7 @@ document.addEventListener("DOMContentLoaded", () => {
       fireTimer = 0;
       isPreBossFire = false;
       score = 0;
+      groundOffset= 0;
       running = false;
       paused = false;
       started = false;
@@ -600,15 +634,18 @@ document.addEventListener("DOMContentLoaded", () => {
 
   /* ------------------ DRAWING ------------------ */
 
-  function drawGround() {
-      if (groundImg && groundImg.complete && groundImg.naturalWidth) {
-          ctx.drawImage(groundImg, 0, getGroundY(), width, groundHeight);
-      } else {
-          ctx.fillStyle = "#2b7a2b";
-          ctx.fillRect(0, getGroundY(), width, groundHeight);
-      }
-  }
+ function drawGround() {
+    const y = getGroundY();
 
+    if (groundImg && groundImg.complete && groundImg.naturalWidth) {
+        ctx.drawImage(groundImg, groundOffset, y, width, groundHeight);
+        ctx.drawImage(groundImg, groundOffset + width, y, width, groundHeight);
+    } else {
+        ctx.fillStyle = "#2b7a2b";
+        ctx.fillRect(groundOffset, y, width, groundHeight);
+        ctx.fillRect(groundOffset + width, y, width, groundHeight);
+    }
+}
   function drawPlayer() {
       if (playerImg && playerImg.complete && playerImg.naturalWidth) {
           ctx.drawImage(playerImg, player.x, player.y, player.w, player.h);
@@ -729,19 +766,22 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function endGame(message) {
-      running = false;
-      gameOver = true;
-      inBossPhase = false;
-      bossIntro = false;
-      allowObstacles = false;
-      isPreBossFire = false;
+    cancelJumpHint(); // 🔥 INSTANT OVERRIDE
 
-      overlay.textContent = message;
-      overlay.style.display = 'block';
-      restartBtn.style.display = 'block';
-      exitBtn.style.display = 'block';
-  }
+    running = false;
+    gameOver = true;
+    inBossPhase = false;
+    bossIntro = false;
+    allowObstacles = false;
+    isPreBossFire = false;
 
+    resetOverlayStyle(); // restore original look
+
+    overlay.textContent = message;
+    overlay.style.display = 'block';
+    restartBtn.style.display = 'block';
+    exitBtn.style.display = 'block';
+}
   /* ------------------ BOSS DEFEAT SEQUENCE ------------------ */
 
   function fadeBackgroundImage(newImage) {
@@ -927,6 +967,15 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       ctx.clearRect(0, 0, width, height);
+      // ---- Ground scrolling ----
+if (running && !paused && !gameOver) {
+    groundOffset -= gameSpeed * (delta / 16);
+
+    // Seamless loop
+    if (groundOffset <= -width) {
+        groundOffset = 0;
+    }
+}
       drawGround();
 
       if (running && !paused && !gameOver) {
@@ -983,7 +1032,70 @@ document.addEventListener("DOMContentLoaded", () => {
     rafId = requestAnimationFrame(loop);
     update(now);
 }
+let hintRemaining = 5000; // total duration
+let hintStartTime = 0;
+function showJumpHint() {
+    cancelJumpHint(false); // do NOT reset remaining time
 
+    hintActive = true;
+    hintStartTime = performance.now();
+
+    overlay.textContent = "Touch / Click to Jump";
+    overlay.style.display = "block";
+
+    overlay.style.background = "rgba(0,0,0,0)";
+    overlay.style.color = "rgba(0,0,0,0.8)";
+    overlay.style.fontWeight = "800";
+    overlay.style.textShadow = "0 0 10px rgba(255,255,255,0.5)";
+    overlay.style.pointerEvents = "none";
+
+    overlay.style.transition = "opacity 0.4s ease";
+    overlay.style.opacity = "1";
+
+    hintTimeout = setTimeout(() => {
+        overlay.style.opacity = "0";
+
+        hintFadeTimeout = setTimeout(() => {
+            cancelJumpHint(true); // full reset
+        }, 600);
+
+    }, hintRemaining);
+}
+function cancelJumpHint(reset = true) {
+    if (!hintActive) return;
+
+    clearTimeout(hintTimeout);
+    clearTimeout(hintFadeTimeout);
+
+    // 🔥 preserve remaining time if pausing
+    if (!reset) {
+        const elapsed = performance.now() - hintStartTime;
+        hintRemaining = Math.max(0, hintRemaining - elapsed);
+    } else {
+        hintRemaining = 5000; // reset fully
+    }
+
+    hintTimeout = null;
+    hintFadeTimeout = null;
+    hintActive = false;
+
+    overlay.style.display = "none";
+    overlay.style.opacity = "1";
+    overlay.style.transition = "";
+    overlay.style.pointerEvents = "";
+
+    resetOverlayStyle();
+}
+function resetOverlayStyle() {
+    overlay.style.background = "";
+    overlay.style.color = "";
+    overlay.style.fontWeight = "";
+    overlay.style.textShadow = "";
+    overlay.style.letterSpacing = "";
+    overlay.style.pointerEvents = "";
+    overlay.style.transition = "";
+    overlay.style.opacity = "1";
+}
   /* ------------------ INPUT HANDLING ------------------ */
 
   function onUserGestureStart() {
@@ -994,17 +1106,22 @@ document.addEventListener("DOMContentLoaded", () => {
       audio9.pause();
       audio9.currentTime = 0;
 
-      safePlay(audio1);
+      if (!paused && running) {
+    safePlay(audio1);
+}
 
       if (!started) {
-          started = true;
-          running = true;
-          overlay.style.display = 'none';
-          lastTime = performance.now();
-          AUDIO_START_GAMEPLAY();
-          return;
-      }
+    started = true;
+    running = true;
+    overlay.style.display = 'none';
+    lastTime = performance.now();
+    AUDIO_START_GAMEPLAY();
 
+    // show hint after start
+    showJumpHint();
+
+    return;
+}
       if (paused) return;
       if (gameOver) return;
 
@@ -1045,28 +1162,6 @@ document.addEventListener("DOMContentLoaded", () => {
   function onTouchEnd() {
       touchStartY = null;
   }
-
- function togglePause(show) {
-    if (gameOver) return;
-
-    paused = show;
-    pauseMenu.style.display = show ? 'block' : 'none';
-    pauseMenu.setAttribute('aria-hidden', String(!show));
-
-    if (show) {
-        try { audio1.pause(); } catch (e) {}
-    } else {
-        lastTime = performance.now();
-        running = true;
-
-        if (userGestureDone) safePlay(audio1);
-
-        if (!rafId) {
-            rafId = requestAnimationFrame(loop);
-        }
-    }
-}
-
   /* ------------------ UI BUTTON BINDINGS ------------------ */
 
   pauseBtn.addEventListener('click', () => {
@@ -1109,9 +1204,11 @@ document.addEventListener("DOMContentLoaded", () => {
           localStorage.removeItem("login");
           window.location.replace("index.html");
           return;
-      }
+          }
 
-// ================== WEB BACK BUTTON = EXIT ==================
+      // APK: no real close from JS → go back to main page
+      window.location.replace("index.html");
+  }
 if (isBrowser) {
     history.pushState({ panel: false }, "");
 
@@ -1119,18 +1216,12 @@ if (isBrowser) {
         if (panelOpened) {
             closeSlidePanel();
             history.pushState({ panel: false }, "");
-            return;
+        } else {
+            localStorage.removeItem("login");
+            location.replace("index.html");
         }
-
-        // otherwise exit page normally
-        exitGame();
     });
 }
-
-      // APK: no real close from JS → go back to main page
-      window.location.href = "index.html";
-  }
-
   /* ------------------ EVENT LISTENERS ------------------ */
 
   canvas.addEventListener('pointerdown', onUserGestureStart);
@@ -1157,24 +1248,6 @@ if (isBrowser) {
           running = true;
       }
   });
-
-  document.addEventListener('visibilitychange', () => {
-    if (document.hidden) {
-        if (running && !paused) {
-            togglePause(true);
-        }
-    } else {
-        // page visible again
-        lastTime = performance.now();
-    }
-});
-
-window.addEventListener('pagehide', () => {
-    if (rafId) {
-        cancelAnimationFrame(rafId);
-        rafId = null;   // IMPORTANT
-    }
-});
 
   window.addEventListener('focus', () => {
       lastTime = performance.now();
@@ -1203,8 +1276,8 @@ window.addEventListener('pagehide', () => {
 
   /* ------------------ INSTAGRAM HEADER CLICK ------------------ */
 
-  const INSTAGRAM_USERNAME = "piyush___editz__";
-  const INSTAGRAM_URL = `https://www.instagram.com/${INSTAGRAM_USERNAME}?igsh=MWx1aGFmaDVrdTZ0Mw==`;
+  const INSTAGRAM_USERNAME = "#";
+  const INSTAGRAM_URL = `#`;
 
   if (topHeader) {
       topHeader.addEventListener("click", () => {
@@ -1212,27 +1285,19 @@ window.addEventListener('pagehide', () => {
           if (!win) location.href = INSTAGRAM_URL;
       });
   }
-
-window.addEventListener('pageshow', (e) => {
-    lastTime = performance.now();
-
-    if (e.persisted || !rafId) {
-        rafId = requestAnimationFrame(loop);
-    }
-    let hiddenAt = null;
+    // ===== AUTO EXIT AFTER 2 MINUTES HIDDEN =====
+let hiddenAt = null;
 let autoExitTimer = null;
 
 const AUTO_EXIT_DELAY = 2 * 60 * 1000; // 2 minutes
+
 function startAutoExitCountdown() {
     if (autoExitTimer) return;
 
     hiddenAt = Date.now();
-
     autoExitTimer = setTimeout(() => {
-
         stopAllAudio();
-        exitGame(); // existing function
-
+        exitGame();
     }, AUTO_EXIT_DELAY);
 }
 
@@ -1243,33 +1308,25 @@ function cancelAutoExitCountdown() {
     }
     hiddenAt = null;
 }
+
 document.addEventListener('visibilitychange', () => {
     if (document.hidden) {
-
-        // Start 2-minute auto-exit timer
         startAutoExitCountdown();
-
-        // Existing behavior (pause + stop audio)
-        if (running && !paused) {
-            togglePause(true);
-        }
-
+        if (running && !paused) togglePause(true);
     } else {
-        // Page visible again → cancel auto-exit
         cancelAutoExitCountdown();
         lastTime = performance.now();
     }
 });
+
 window.addEventListener('pagehide', () => {
-
-    // Treat pagehide as hidden → start countdown
     startAutoExitCountdown();
-
     if (rafId) {
         cancelAnimationFrame(rafId);
         rafId = null;
     }
 });
+
 window.addEventListener('pageshow', (e) => {
     cancelAutoExitCountdown();
     lastTime = performance.now();
@@ -1277,7 +1334,6 @@ window.addEventListener('pageshow', (e) => {
     if (e.persisted || !rafId) {
         rafId = requestAnimationFrame(loop);
     }
-});
 });
 })(); // end IIFE
 
