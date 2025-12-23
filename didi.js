@@ -181,7 +181,6 @@ document.addEventListener("DOMContentLoaded", () => {
   audio1.volume = 0.05;
 
   const audio2 = new Audio("audio2.wav");  // jump
-  audio2.volume = 0.03;
   const audio3 = new Audio("audio3.wav");  // hit obstacle
 
   const audio4 = new Audio("audio4.mp3");  // boss warning
@@ -208,7 +207,18 @@ document.addEventListener("DOMContentLoaded", () => {
       const p = Array.isArray(pattern) ? pattern : [pattern];
       navigator.vibrate(p);
   }
-
+function stopAllAudio() {
+    [
+        audio1, audio2, audio3,
+        audio4, audio5, audio6,
+        audio7, audio8, audio9
+    ].forEach(a => {
+        try {
+            a.pause();
+            a.currentTime = 0;
+        } catch (e) {}
+    });
+}
 
   /* ------------------ AUDIO HELPERS ------------------ */
 
@@ -339,11 +349,13 @@ function togglePause(show) {
   /* ------------------ IMAGES ------------------ */
 
   const groundImg = new Image(); groundImg.src = "ground.jpg";
+  const bgImg = new Image();
+bgImg.src = "background.jpg";
   const playerImg = new Image(); playerImg.src = "character.png";
   const obstacleImg = new Image(); obstacleImg.src = "obstacle.png";
   const bossImg = new Image(); bossImg.src = "boss_monster.jpeg";
   const bulletImg = new Image(); bulletImg.src = "bullet.png";
-  const bgImg = new Image(); bgImg.src = "background.png";
+  
 
   /* ------------------ GAME STATE ------------------ */
 
@@ -352,6 +364,9 @@ function togglePause(show) {
       deviceRatio = Math.max(1, window.devicePixelRatio || 1);
   let visualScale = 1;
   let groundHeight = 90;
+  let freezeGround = false;
+let groundSlowFactor = 1; // 1 → moving, 0 → stopped
+  let skyOffset=0;
   let groundOffset=0;
   let running = false, paused = false, started = false, userGestureDone = false;
   let score = 0;
@@ -406,7 +421,14 @@ let hintActive = false;
           p.r *= p.shrink;
       }
   }
+function drawSky() {
+    if (!bgImg.complete) return;
 
+    const x = skyOffset % width;
+
+    ctx.drawImage(bgImg, x, 0, width, height);
+    ctx.drawImage(bgImg, x + width, 0, width, height);
+}
   function drawDust() {
       const now = performance.now();
       for (const p of dustParticles) {
@@ -490,6 +512,8 @@ let hintActive = false;
       isPreBossFire = false;
       score = 0;
       groundOffset= 0;
+      freezeGround = false;
+groundSlowFactor = 1;
       running = false;
       paused = false;
       started = false;
@@ -501,7 +525,7 @@ let hintActive = false;
       gameOver = false;
 
       overlay.textContent = "Tap / Click / Press Space to start";
-      document.body.style.backgroundImage = 'url(background.jpg)';
+document.body.style.background = "#87ceeb"; // fallback sky color
       overlay.style.display = "block";
       pauseMenu.style.display = "none";
       restartBtn.style.display = "none";
@@ -718,30 +742,38 @@ let hintActive = false;
   /* ------------------ BOSS LOGIC ------------------ */
 
   function spawnBoss() {
-      const w = 90 * visualScale;
-      const h = 80 * visualScale;
-      boss = {
-          x: width + 50,
-          y: getGroundY() - h,
-          w,
-          h,
-          vx: -2,
-          hp: 200,
-          maxHp: 200
-      };
-      bossHpBar.style.display = 'block';
-      updateBossHpBar();
+    const w = 90 * visualScale;
+    const h = 80 * visualScale;
 
-      const targetX = Math.min(width - player.w - 140 * visualScale, player.x + 290 * visualScale);
-      let steps = 50;
-      const shiftAmt = (targetX - player.x) / steps;
-      const shiftInterval = setInterval(() => {
-          player.x += shiftAmt;
-          steps--;
-          if (steps <= 0) clearInterval(shiftInterval);
-      }, 16);
-  }
+    const targetX = Math.min(
+        width - player.w - 140 * visualScale,
+        player.x + 290 * visualScale
+    );
 
+    boss = {
+        x: width + 50,
+        y: getGroundY() - h,
+        w,
+        h,
+        vx: -2,
+        hp: 200,
+        maxHp: 200,
+        targetX,  // ✅ stored correctly
+        hasReachedLeft:false
+    };
+
+    bossHpBar.style.display = 'block';
+    updateBossHpBar();
+
+    // Player shift
+    let steps = 50;
+    const shiftAmt = (targetX - player.x) / steps;
+    const shiftInterval = setInterval(() => {
+        player.x += shiftAmt;
+        steps--;
+        if (steps <= 0) clearInterval(shiftInterval);
+    }, 16);
+}
   function updateBossHpBar() {
       if (!boss) return;
       const pct = Math.max(0, boss.hp / boss.maxHp);
@@ -749,23 +781,58 @@ let hintActive = false;
   }
 
   function updateBoss(delta) {
-      if (!boss) return;
-      const move = boss.vx * (delta / 16);
-      boss.x += move;
+    if (!boss) return;
 
-      if (boss.x < 60) boss.vx = Math.abs(boss.vx);
-      if (boss.x + boss.w > width - 60) boss.vx = -Math.abs(boss.vx);
+    const dt = delta / 16;
 
-      if (collides(player, boss)) {
-          safePlay(audio3);
-          safePlay(audio6);
-          safeVibrate([200, 60, 200]);
-          AUDIO_BOSS_WINS();
-          endGame("U Can't Ever Defeat Modi Even In Game Also");
-      }
-  }
+    // ---- ENTRY PHASE ----
+    if (!freezeGround) {
+        boss.x += boss.vx * dt;
 
-  function endGame(message) {
+        // Freeze ground at arena
+        if (boss.x <= boss.targetX) {
+    boss.x = boss.targetX;
+    freezeGround = true;
+
+    groundSlowFactor = 1; // 🔥 lock current normal speed
+    boss.vx = -2;
+}     return;
+    }
+
+    // ---- FIRST FULL LEFT SWEEP ----
+    if (!boss.hasReachedLeft) {
+        boss.x += boss.vx * dt;
+
+        if (boss.x <= 60) {
+            boss.x = 60;
+            boss.hasReachedLeft = true;
+            boss.vx = 2; // now start normal patrol
+        }
+        return;
+    }
+
+    // ---- NORMAL PATROL (LEFT ↔ RIGHT) ----
+    boss.x += boss.vx * dt;
+
+    if (boss.x <= 60) {
+        boss.x = 60;
+        boss.vx = Math.abs(boss.vx);
+    }
+
+    if (boss.x + boss.w >= width - 60) {
+        boss.x = width - boss.w - 60;
+        boss.vx = -Math.abs(boss.vx);
+    }
+
+    // ---- COLLISION ----
+    if (collides(player, boss)) {
+        safePlay(audio3);
+        safePlay(audio6);
+        safeVibrate([200, 60, 200]);
+        AUDIO_BOSS_WINS();
+        endGame("U Can't Ever Defeat Modi Even In Game Also");
+    }
+}  function endGame(message) {
     cancelJumpHint(); // 🔥 INSTANT OVERRIDE
 
     running = false;
@@ -956,7 +1023,7 @@ let hintActive = false;
 
       const delta = now - lastTime;
       lastTime = now;
-
+      
       if (
           canvas.width !== Math.floor(width * deviceRatio) ||
           canvas.height !== Math.floor(height * deviceRatio)
@@ -966,17 +1033,41 @@ let hintActive = false;
           ctx.setTransform(deviceRatio, 0, 0, deviceRatio, 0, 0);
       }
 
-      ctx.clearRect(0, 0, width, height);
-      // ---- Ground scrolling ----
-if (running && !paused && !gameOver) {
-    groundOffset -= gameSpeed * (delta / 16);
+ ctx.clearRect(0, 0, width, height);
+ 
+// ---- SKY PARALLAX (slow & smooth) ----
+const SKY_TARGET_SCORE = 250;
 
-    // Seamless loop
-    if (groundOffset <= -width) {
-        groundOffset = 0;
+if (!gameOver && score < SKY_TARGET_SCORE) {
+    const progress = score / SKY_TARGET_SCORE; // 0 → 1
+    skyOffset = -progress * width;             // exactly one full cycle
+}
+
+
+drawSky();
+
+// ---- Ground scrolling (smooth stop) ----
+if (running && !paused && !gameOver) {
+
+    if (freezeGround) {
+        // ease out ground speed
+        groundSlowFactor *= 0.92;
+        if (groundSlowFactor < 0.02) {
+            groundSlowFactor = 0;
+        }
+    }
+
+    const speed = gameSpeed * groundSlowFactor;
+
+    if (speed > 0) {
+        groundOffset -= speed * (delta / 16);
+
+        if (groundOffset <= -width) {
+            groundOffset = 0;
+        }
     }
 }
-      drawGround();
+drawGround();
 
       if (running && !paused && !gameOver) {
           if (allowObstacles) {
@@ -1105,11 +1196,10 @@ function resetOverlayStyle() {
       safePlay(audio9);
       audio9.pause();
       audio9.currentTime = 0;
-
-      if (!paused && running) {
+      
+      if(!paused && running){
     safePlay(audio1);
 }
-
       if (!started) {
     started = true;
     running = true;
@@ -1256,6 +1346,7 @@ if (isBrowser) {
   /* ------------------ ASSET PRELOAD THEN INIT ------------------ */
 
   const assets = [
+      new Promise(r => { bgImg.onload = r; bgImg.onerror = r; setTimeout(r, 1200); }),
       new Promise(r => { groundImg.onload = r; groundImg.onerror = r; setTimeout(r, 1200); }),
       new Promise(r => { playerImg.onload = r; playerImg.onerror = r; setTimeout(r, 1200); }),
       new Promise(r => { obstacleImg.onload = r; obstacleImg.onerror = r; setTimeout(r, 1200); }),
@@ -1312,7 +1403,16 @@ function cancelAutoExitCountdown() {
 document.addEventListener('visibilitychange', () => {
     if (document.hidden) {
         startAutoExitCountdown();
-        if (running && !paused) togglePause(true);
+
+        // 🔥 HARD STOP AUDIO
+        stopAllAudio();
+
+        // Pause game state
+        if (running && !paused) {
+            paused = true;
+            pauseMenu.style.display = 'block';
+        }
+
     } else {
         cancelAutoExitCountdown();
         lastTime = performance.now();
@@ -1321,6 +1421,10 @@ document.addEventListener('visibilitychange', () => {
 
 window.addEventListener('pagehide', () => {
     startAutoExitCountdown();
+
+    // 🔥 FORCE STOP EVERYTHING
+    stopAllAudio();
+
     if (rafId) {
         cancelAnimationFrame(rafId);
         rafId = null;
