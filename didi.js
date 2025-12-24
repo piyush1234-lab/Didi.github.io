@@ -7,97 +7,83 @@ const FORCE_POPUP_DEBUG = false;
 // ================== VIBRATION TEST (NO USER ACTION REQUIRED) ==================
 function testVibration() {
     return new Promise(resolve => {
-
-        // If vibrate API missing → fail
         if (!navigator.vibrate) {
             resolve(false);
             return;
         }
 
-        let result = false;
-
         try {
-            // Try scheduling a vibration
-            result = navigator.vibrate([5, 5, 5]);
-        } catch (e) {
+            const result = navigator.vibrate([5, 5, 5]);
+            setTimeout(() => resolve(result === true), 40);
+        } catch {
             resolve(false);
-            return;
         }
-
-        // Wait briefly to confirm the API runs
-        setTimeout(() => {
-            resolve(result === true);
-        }, 40);
     });
 }
 
 // ================== SHOW POPUP AFTER LOADER IF VIBRATION FAILS ==================
-window.addEventListener("load", () => {
-    setTimeout(async () => {
+window.addEventListener("load", async () => {
 
-        const works = await testVibration();
-
-        // If vibration works → do NOT show popup
-        if (works) return;
-
-        // If vibration fails → show popup for both APK + Web
-        const box = document.getElementById("apkVibrationPopup");
-        const txt = document.getElementById("apkVibText");
-        const okBtn = document.getElementById("apkVibOK");
-        const cancelBtn = document.getElementById("apkVibCancel");
-
-        // Platform detection
-        const UA = navigator.userAgent || "";
-        const isApp = UA.startsWith("Dalvik/");
-        const isBrowser = /Mozilla\/5\.0/.test(UA);
-
-        // Message for APP vs WEB
-        // ---------- Message ----------
-if (isApp) {
-    txt.innerHTML = `
-        Vibration is not working on this device.<br>
-        For best gameplay, do you want to continue in browser?
-    `;
-    cancelBtn.style.display = "inline-flex";
-} else {
-    txt.innerHTML = `
-        Your browser does not support vibration.<br>
-        Click OK to continue without vibration.
-    `;
-    cancelBtn.style.display = "none";
-}
-
-// Show popup
-box.style.display = "flex";
-
-// ---------- OK BUTTON ----------
-okBtn.onclick = () => {
-
-    // APK → redirect to browser
+    // ---------- APP (Dalvik) ----------
     if (isApp) {
-        const url = "https://piyush1234-lab.github.io/Didi.github.io/didi.html?apk=1";
-
-        try {
-            if (window.Android && Android.openUrl) {
-                Android.openUrl(url);
-                return;
-            }
-        } catch (e) {}
-
-        window.location.href = url;
+        showVibrationPopup(); // 🔥 INSTANT
         return;
     }
 
-    // Browser → continue without vibration
-    box.style.display = "none";
-};
-
-// ---------- CANCEL BUTTON ----------
-cancelBtn.onclick = () => {
-    box.style.display = "none";
-};
-    }, 10000); // after loader finishes
+    // ---------- BROWSER ----------
+    setTimeout(async () => {
+        const works = await testVibration();
+        if (!works) {
+            showVibrationPopup(); // ⏱ after test
+        }
+    }, 10000); // small delay is enough
 });
+
+    function showVibrationPopup(isApp) {
+    const box = document.getElementById("apkVibrationPopup");
+    const txt = document.getElementById("apkVibText");
+    const okBtn = document.getElementById("apkVibOK");
+    const cancelBtn = document.getElementById("apkVibCancel");
+
+    if (!box || !txt || !okBtn || !cancelBtn) return;
+
+    if (isApp) {
+        txt.innerHTML = `
+            Vibration is not working on this device.<br>
+            For best gameplay, do you want to continue in browser?
+        `;
+        cancelBtn.style.display = "inline-flex";
+    } else {
+        txt.innerHTML = `
+            Your browser does not support vibration.<br>
+            Click OK to continue without vibration.
+        `;
+        cancelBtn.style.display = "none";
+    }
+
+    box.style.display = "flex";
+
+    okBtn.onclick = () => {
+        if (isApp) {
+            const url = "https://piyush1234-lab.github.io/Didi.github.io/didi.html?apk=1";
+
+            try {
+                if (window.Android && Android.openUrl) {
+                    Android.openUrl(url);
+                    return;
+                }
+            } catch (e) {}
+
+            window.location.href = url;
+        } else {
+            box.style.display = "none";
+        }
+    };
+
+    cancelBtn.onclick = () => {
+        box.style.display = "none";
+    };
+}
 document.addEventListener("DOMContentLoaded", () => {
     // -------- Loader logic --------
     let fakePercent = 0;
@@ -181,8 +167,8 @@ document.addEventListener("DOMContentLoaded", () => {
   audio1.volume = 0.05;
 
   const audio2 = new Audio("audio2.wav");  // jump
-audio2.volume = 0.03;
-
+  audio2.volume= 0.08;
+  
   const audio3 = new Audio("audio3.wav");  // hit obstacle
 
   const audio4 = new Audio("audio4.mp3");  // boss warning
@@ -491,7 +477,7 @@ function drawSky() {
   /* ------------------ INIT GAME ------------------ */
 
   function init(fullReset = true) {
-  cancelJumpHint();
+    cancelJumpHint();
       resize();
       player = {
           x: 90 * visualScale,
@@ -673,14 +659,14 @@ document.body.style.background = "#87ceeb"; // fallback sky color
     }
 }
   function drawPlayer() {
-      if (playerImg && playerImg.complete && playerImg.naturalWidth) {
-          ctx.drawImage(playerImg, player.x, player.y, player.w, player.h);
-      } else {
-          ctx.fillStyle = "#ffd166";
-          ctx.fillRect(player.x, player.y, player.w, player.h);
-      }
-  }
-
+    if (playerImg.complete && playerImg.naturalWidth > 0) {
+        ctx.drawImage(playerImg, player.x, player.y, player.w, player.h);
+    } else {
+        // 🔥 TEMP PLACEHOLDER (prevents invisible bug)
+        ctx.fillStyle = "#ffcc00";
+        ctx.fillRect(player.x, player.y, player.w, player.h);
+    }
+}
   function drawObstacles() {
       for (const ob of obstacles) {
           if (obstacleImg && obstacleImg.complete && obstacleImg.naturalWidth) {
@@ -1365,7 +1351,22 @@ if (isBrowser) {
       new Promise(r => { audio9.oncanplaythrough = r; audio9.onerror = r; setTimeout(r, 1200); })
   ];
 
-  Promise.all(assets).then(() => init(true)).catch(() => init(true));
+  Promise.all(assets).then(() => {
+    init(true);
+
+    // force first visual frame
+    requestAnimationFrame((t) => {
+        lastTime = t;
+        update(t);
+    });
+
+    if (!rafId) {
+        rafId = requestAnimationFrame(loop);
+    }
+}).catch(() => {
+    init(true);
+    rafId = requestAnimationFrame(loop);
+});
 
   /* ------------------ INSTAGRAM HEADER CLICK ------------------ */
 
@@ -1379,66 +1380,37 @@ if (isBrowser) {
       });
   }
     // ===== AUTO EXIT AFTER 2 MINUTES HIDDEN =====
-let hiddenAt = null;
-let autoExitTimer = null;
+const AUTO_EXIT_DELAY = 2 * 60 * 1000;
+const HIDDEN_KEY = "hiddenAt";
 
-const AUTO_EXIT_DELAY = 2 * 60 * 1000; // 2 minutes
-
-function startAutoExitCountdown() {
-    if (autoExitTimer) return;
-
-    hiddenAt = Date.now();
-    autoExitTimer = setTimeout(() => {
-        stopAllAudio();
-        exitGame();
-    }, AUTO_EXIT_DELAY);
-}
-
-function cancelAutoExitCountdown() {
-    if (autoExitTimer) {
-        clearTimeout(autoExitTimer);
-        autoExitTimer = null;
-    }
-    hiddenAt = null;
-}
-
-document.addEventListener('visibilitychange', () => {
+document.addEventListener("visibilitychange", () => {
     if (document.hidden) {
-        startAutoExitCountdown();
+        localStorage.setItem(HIDDEN_KEY, Date.now());
 
-        // 🔥 HARD STOP AUDIO
         stopAllAudio();
 
-        // Pause game state
         if (running && !paused) {
             paused = true;
-            pauseMenu.style.display = 'block';
+            pauseMenu.style.display = "block";
+        }
+
+        // close slide panel safely
+        if (panelOpened) {
+            closeSlidePanel();
         }
 
     } else {
-        cancelAutoExitCountdown();
+        const hiddenAt = Number(localStorage.getItem(HIDDEN_KEY));
+        localStorage.removeItem(HIDDEN_KEY);
+
+        if (hiddenAt && Date.now() - hiddenAt >= AUTO_EXIT_DELAY) {
+            stopAllAudio();
+            localStorage.removeItem("login");
+            location.replace("index.html");
+            return;
+        }
+
         lastTime = performance.now();
-    }
-});
-
-window.addEventListener('pagehide', () => {
-    startAutoExitCountdown();
-
-    // 🔥 FORCE STOP EVERYTHING
-    stopAllAudio();
-
-    if (rafId) {
-        cancelAnimationFrame(rafId);
-        rafId = null;
-    }
-});
-
-window.addEventListener('pageshow', (e) => {
-    cancelAutoExitCountdown();
-    lastTime = performance.now();
-
-    if (e.persisted || !rafId) {
-        rafId = requestAnimationFrame(loop);
     }
 });
 })(); // end IIFE
@@ -1481,16 +1453,7 @@ slideContent.addEventListener("click", () => {
     closeSlidePanel();
     window.location.href = redirectURL;
 });
-document.addEventListener("visibilitychange", () => {
-    if (document.hidden && panelOpened) {
-        closeSlidePanel();
-    }
-});
-window.addEventListener("pagehide", () => {
-    if (panelOpened) {
-        closeSlidePanel();
-    }
-});
+
 // CONTENT CLICK → redirect ONLY when open
 slideContent.addEventListener("click", () => {
     if (panelOpened) {
