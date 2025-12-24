@@ -53,7 +53,7 @@ window.addEventListener("load", async () => {
             For best gameplay, do you want to continue in browser?
         `;
         cancelBtn.style.display = "inline-flex";
-    } else {
+    } if(isBrowser) {
         txt.innerHTML = `
             Your browser does not support vibration.<br>
             Click OK to continue without vibration.
