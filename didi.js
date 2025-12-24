@@ -39,7 +39,7 @@ window.addEventListener("load", async () => {
     }, 10000); // small delay is enough
 });
 
-    function showVibrationPopup(isApp) {
+    function showVibrationPopup() {
     const box = document.getElementById("apkVibrationPopup");
     const txt = document.getElementById("apkVibText");
     const okBtn = document.getElementById("apkVibOK");
