@@ -48,10 +48,7 @@ window.addEventListener("load", async () => {
     if (!box || !txt || !okBtn || !cancelBtn) return;
 
     if (isApp) {
-        txt.innerHTML = `
-            Vibration is not working on this device.<br>
-            For best gameplay, do you want to continue in browser?
-        `;
+        txt.innerHTML = `Vibration is not working on this device.<br>For best gameplay, do you want to continue in browser?`;
         cancelBtn.style.display = "inline-flex";
     } if(isBrowser) {
         txt.innerHTML = `
@@ -64,8 +61,15 @@ window.addEventListener("load", async () => {
     box.style.display = "flex";
 
     okBtn.onclick = () => {
-        if (isApp) {
-            const url = "https://piyush1234-lab.github.io/Didi.github.io/didi.html?apk=1";
+    box.style.display = "none";
+
+    // 🔥 FIX #3: re-sync canvas after popup
+    setTimeout(() => {
+        if (typeof resize === "function") resize();
+    }, 50);
+
+    if (isApp) {
+        const url = "https://piyush1234-lab.github.io/Didi.github.io/didi.html?apk=1";
 
             try {
                 if (window.Android && Android.openUrl) {
@@ -81,9 +85,14 @@ window.addEventListener("load", async () => {
     };
 
     cancelBtn.onclick = () => {
-        box.style.display = "none";
-    };
-}
+    box.style.display = "none";
+
+    // 🔥 FIX #3: re-sync canvas after popup
+    setTimeout(() => {
+        if (typeof resize === "function") resize();
+    }, 50);
+    }
+};
 document.addEventListener("DOMContentLoaded", () => {
     // -------- Loader logic --------
     let fakePercent = 0;
@@ -444,7 +453,7 @@ function drawSky() {
 
   function resize() {
       width = window.innerWidth;
-      height = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+      height = window.innerHeight;
       deviceRatio = Math.max(1, window.devicePixelRatio || 1);
 
       canvas.style.width = width + "px";
@@ -1351,23 +1360,31 @@ if (isBrowser) {
       new Promise(r => { audio9.oncanplaythrough = r; audio9.onerror = r; setTimeout(r, 1200); })
   ];
 
-  Promise.all(assets).then(() => {
-    init(true);
 
-    // force first visual frame
-    requestAnimationFrame((t) => {
-        lastTime = t;
-        update(t);
+  Promise.all(assets).then(() => {
+  
+    requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+
+            init(true);
+
+            // force first visual frame
+            requestAnimationFrame((t) => {
+                lastTime = t;
+                update(t);
+            });
+
+            if (!rafId) {
+                rafId = requestAnimationFrame(loop);
+            }
+
+        });
     });
 
-    if (!rafId) {
-        rafId = requestAnimationFrame(loop);
-    }
 }).catch(() => {
     init(true);
     rafId = requestAnimationFrame(loop);
 });
-
   /* ------------------ INSTAGRAM HEADER CLICK ------------------ */
 
   const INSTAGRAM_USERNAME = "#";
