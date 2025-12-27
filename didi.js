@@ -1363,21 +1363,29 @@ if (isBrowser) {
 
   Promise.all(assets).then(() => {
 
+    // 🔥 Let WebView finish layout (2 frames)
     requestAnimationFrame(() => {
         requestAnimationFrame(() => {
 
+            // ---- INIT GAME STATE ----
             init(true);
 
-            requestAnimationFrame((t) => {
-                lastTime = t;
-                update(t);
+            // ---- FORCE FIRST VISUAL PAINT (NO LOGIC) ----
+            requestAnimationFrame(() => {
+                ctx.clearRect(0, 0, width, height);
+
+                drawSky();
+                drawGround();
+                drawPlayer();   // ✅ PLAYER ALWAYS VISIBLE ON FIRST LOAD
             });
 
+            // ---- START MAIN LOOP (LOGIC RUNS ONLY WHEN running=true) ----
             if (!rafId) {
+                lastTime = performance.now();
                 rafId = requestAnimationFrame(loop);
             }
 
-            // 🔥 FINAL FIX: show popup AFTER game exists
+            // ---- SHOW VIBRATION POPUP AFTER GAME EXISTS ----
             if (window.__SHOW_VIB_POPUP__) {
                 setTimeout(showVibrationPopup, 100);
                 window.__SHOW_VIB_POPUP__ = false;
@@ -1386,8 +1394,12 @@ if (isBrowser) {
         });
     });
 
-}); 
-
+}).catch(() => {
+    // ---- FALLBACK (EXTREME EDGE CASE) ----
+    init(true);
+    lastTime = performance.now();
+    rafId = requestAnimationFrame(loop);
+});
  /* ------------------ INSTAGRAM HEADER CLICK ------------------ */
 
   const INSTAGRAM_USERNAME = "#";
