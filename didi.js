@@ -26,10 +26,9 @@ window.addEventListener("load", async () => {
 
     // ---------- APP (Dalvik) ----------
     if (isApp) {
-        showVibrationPopup(); // 🔥 INSTANT
-        return;
-    }
-
+    window.__SHOW_VIB_POPUP__ = true;
+    return;
+}
     // ---------- BROWSER ----------
     setTimeout(async () => {
         const works = await testVibration();
@@ -65,8 +64,8 @@ window.addEventListener("load", async () => {
 
     // 🔥 FIX #3: re-sync canvas after popup
     setTimeout(() => {
-        if (typeof resize === "function") resize();
-    }, 50);
+    if (window.__gameResize__) window.__gameResize__();
+}, 50);
 
     if (isApp) {
         const url = "https://piyush1234-lab.github.io/Didi.github.io/didi.html?apk=1";
@@ -482,7 +481,8 @@ function drawSky() {
           ob.y = getGroundY() - ob.h;
       }
   }
-
+  
+window.__gameResize__ = resize;
   /* ------------------ INIT GAME ------------------ */
 
   function init(fullReset = true) {
@@ -1362,13 +1362,12 @@ if (isBrowser) {
 
 
   Promise.all(assets).then(() => {
-  
+
     requestAnimationFrame(() => {
         requestAnimationFrame(() => {
 
             init(true);
 
-            // force first visual frame
             requestAnimationFrame((t) => {
                 lastTime = t;
                 update(t);
@@ -1378,14 +1377,18 @@ if (isBrowser) {
                 rafId = requestAnimationFrame(loop);
             }
 
+            // 🔥 FINAL FIX: show popup AFTER game exists
+            if (window.__SHOW_VIB_POPUP__) {
+                setTimeout(showVibrationPopup, 100);
+                window.__SHOW_VIB_POPUP__ = false;
+            }
+
         });
     });
 
-}).catch(() => {
-    init(true);
-    rafId = requestAnimationFrame(loop);
-});
-  /* ------------------ INSTAGRAM HEADER CLICK ------------------ */
+}); 
+
+ /* ------------------ INSTAGRAM HEADER CLICK ------------------ */
 
   const INSTAGRAM_USERNAME = "#";
   const INSTAGRAM_URL = `#`;
@@ -1476,4 +1479,4 @@ slideContent.addEventListener("click", () => {
     if (panelOpened) {
         window.location.href = redirectURL;
     }
-});
+});    
