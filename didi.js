@@ -1098,12 +1098,15 @@ drawGround();
           score += delta * 0.01;
           updateScoreDisplay();
       } else {
-          updateExplosions(performance.now());
-          updateDust(performance.now());
-          return;
-      }
-      
+    // 🔥 DRAW PLAYER EVEN BEFORE GAME STARTS
+    drawSky();
+    drawGround();
+    drawPlayer();
 
+    updateExplosions(performance.now());
+    updateDust(performance.now());
+    return;
+}       
       drawDust();
       drawObstacles();
       drawBullets();
@@ -1195,23 +1198,16 @@ function resetOverlayStyle() {
       audio9.pause();
       audio9.currentTime = 0;
       
-      if(!paused && running){
+      if (!paused && running) {
     safePlay(audio1);
 }
-      if (!started) {
+
+if (!started) {
     started = true;
     running = true;
     overlay.style.display = 'none';
     lastTime = performance.now();
     AUDIO_START_GAMEPLAY();
-
-    // 🔥 FORCE FIRST DRAW ON TOUCH (ONLY ONCE)
-    requestAnimationFrame(() => {
-        ctx.clearRect(0, 0, width, height);
-        drawSky();
-        drawGround();
-        drawPlayer(); // ✅ visible immediately on touch
-    });
 
     // show hint after start
     showJumpHint();
@@ -1390,7 +1386,7 @@ if (isBrowser) {
             if (window.__SHOW_VIB_POPUP__) {
                 setTimeout(showVibrationPopup, 100);
                 window.__SHOW_VIB_POPUP__ = false;
-            }
+                   }
 
         });
     });        
