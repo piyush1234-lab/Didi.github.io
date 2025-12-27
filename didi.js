@@ -1102,6 +1102,7 @@ drawGround();
           updateDust(performance.now());
           return;
       }
+      
 
       drawDust();
       drawObstacles();
@@ -1203,6 +1204,14 @@ function resetOverlayStyle() {
     overlay.style.display = 'none';
     lastTime = performance.now();
     AUDIO_START_GAMEPLAY();
+
+    // 🔥 FORCE FIRST DRAW ON TOUCH (ONLY ONCE)
+    requestAnimationFrame(() => {
+        ctx.clearRect(0, 0, width, height);
+        drawSky();
+        drawGround();
+        drawPlayer(); // ✅ visible immediately on touch
+    });
 
     // show hint after start
     showJumpHint();
@@ -1384,9 +1393,9 @@ if (isBrowser) {
             }
 
         });
-    });
+    });        
 }); 
-
+  
  /* ------------------ INSTAGRAM HEADER CLICK ------------------ */
 
   const INSTAGRAM_USERNAME = "#";
