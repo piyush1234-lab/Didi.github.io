@@ -66,23 +66,31 @@ window.addEventListener("load", async () => {
     setTimeout(() => {
     if (window.__gameResize__) window.__gameResize__();
 }, 50);
-
+okBtn.onclick = () => {
     if (isApp) {
         const url = "https://piyush1234-lab.github.io/Didi.github.io/didi.html?apk=1";
 
-            try {
-                if (window.Android && Android.openUrl) {
-                    Android.openUrl(url);
-                    return;
-                }
-            } catch (e) {}
+        // 🔥 FORCE ANDROID INTENT (best)
+        try {
+            if (window.Android && Android.openUrl) {
+                Android.openUrl(url);
+                return;
+            }
+        } catch (e) {}
 
-            window.location.href = url;
-        } else {
-            box.style.display = "none";
-        }
-    };
+        // 🔥 FALLBACK: system intent via _system
+        try {
+            window.open(url, "_system");
+            return;
+        } catch (e) {}
 
+        // ❌ LAST RESORT (still inside app)
+        location.href = url;
+
+    } else {
+        box.style.display = "none";
+    }
+};
     cancelBtn.onclick = () => {
     box.style.display = "none";
 
