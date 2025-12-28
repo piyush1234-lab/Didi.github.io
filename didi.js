@@ -66,7 +66,6 @@ window.addEventListener("load", async () => {
     setTimeout(() => {
     if (window.__gameResize__) window.__gameResize__();
 }, 50);
-okBtn.onclick = () => {
     if (isApp) {
         const url = "https://piyush1234-lab.github.io/Didi.github.io/didi.html?apk=1";
 
