@@ -90,6 +90,7 @@ window.addEventListener("load", async () => {
         box.style.display = "none";
     }
 };
+
     cancelBtn.onclick = () => {
     box.style.display = "none";
 
@@ -145,27 +146,25 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 });
 
-
 // ================== GAME CODE ==================
 (() => {
 
-  // -------- LOGIN CHECK: only for WEB, not APK --------
-    const params = new URLSearchParams(window.location.search);
+const params = new URLSearchParams(window.location.search);
 
   if (params.get("apk") === "1") {
       localStorage.setItem("login", "true");
       history.replaceState({}, "", window.location.pathname);
   }
 
-  // -------- LOGIN CHECK: only for WEB, not APK --------
+// -------- LOGIN CHECK: only for WEB, not APK --------
   if (!isApp) {
       const loginStatus = localStorage.getItem("login");
       if (loginStatus !== "true") {
           window.location.href = "index.html";
       }
-  }
-
-  // -------- Elements --------
+      }
+      
+// -------- Elements --------
   const canvas = document.getElementById('gameCanvas');
   const ctx = canvas.getContext('2d');
   const scoreEl = document.getElementById('score');
@@ -948,7 +947,7 @@ document.body.style.background = "#87ceeb"; // fallback sky color
                   AUDIO_AFTER_BLAST_MESSAGE();
               }, 1000);
           }, 3000);
-      }, 12000);
+      }, 13000);
   }
 
   /* ------------------ BOSS INTRO SEQUENCE ------------------ */
@@ -1122,7 +1121,7 @@ drawGround();
     updateDust(performance.now());
     return;
 }       
-      drawDust();
+                    drawDust();
       drawObstacles();
       drawBullets();
       drawPlayer();
@@ -1233,9 +1232,8 @@ if (!started) {
       if (gameOver) return;
 
       jump();
-  }
-
-  function onKeyDown(e) {
+  } 
+   function onKeyDown(e) {
       if (gameOver && e.code === "Space") init(true);
       if (['Space', 'ArrowUp', 'KeyW'].includes(e.code)) {
           e.preventDefault();
