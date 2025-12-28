@@ -150,6 +150,14 @@ document.addEventListener("DOMContentLoaded", () => {
 (() => {
 
   // -------- LOGIN CHECK: only for WEB, not APK --------
+    const params = new URLSearchParams(window.location.search);
+
+  if (params.get("apk") === "1") {
+      localStorage.setItem("login", "true");
+      history.replaceState({}, "", window.location.pathname);
+  }
+
+  // -------- LOGIN CHECK: only for WEB, not APK --------
   if (!isApp) {
       const loginStatus = localStorage.getItem("login");
       if (loginStatus !== "true") {
