@@ -28,7 +28,7 @@ async function sha256(str) {
         .join("");
 }
 
-const STORED_HASH = "63f8e09e78d3fc42982680e79141ae07bfe8a54b1064492530e84a4cee0cb8b7";
+const STORED_HASH = "e9199cc4714b0479ae0d054e1e3745a971bdaa8ee7d860b6882a324f7bfd194e";
 
 async function login() {
     let pwd = document.getElementById("pwd").value;
