@@ -1,4 +1,5 @@
-// Touch and visual effects
+// ================== TOUCH & VISUAL EFFECTS ==================
+
 function tou1(elem) {
     elem.style.background = "white";
     elem.style.color = "#111";
@@ -6,7 +7,7 @@ function tou1(elem) {
 }
 
 function touend1(elem) {
-    elem.style.background = "rgba(255, 255, 255, 0.15)";
+    elem.style.background = "rgba(255,255,255,0.15)";
     elem.style.color = "white";
     elem.style.transform = "scale(1)";
 }
@@ -17,7 +18,7 @@ function tou11(elem) {
 }
 
 function touend11(elem) {
-    elem.style.background = "rgba(255, 255, 255, 0.15)";
+    elem.style.background = "rgba(255,255,255,0.15)";
     elem.style.color = "white";
 }
 
@@ -32,7 +33,7 @@ function deinpu(elem) {
 }
 
 function shad(elem) {
-    elem.style.boxShadow = "0px 0px 20px 15px rgba(255,255,255,0.5)";
+    elem.style.boxShadow = "0 0 20px 15px rgba(255,255,255,0.5)";
     elem.style.border = "2px solid black";
 }
 
@@ -49,8 +50,9 @@ function deshad2(elem) {
     elem.style.transform = "scale(1)";
 }
 
-// Form validation
-function validation(event) {
+// ================== FORM VALIDATION ==================
+
+function validation() {
     const form = document.getElementById("contact");
 
     const name = form.name.value.trim();
@@ -58,39 +60,19 @@ function validation(event) {
     const email = form.email.value.trim();
     const feedback = form.feedback.value.trim();
 
-    if (name === "" || phone === "" || email === "" || feedback === "") {
-        event.preventDefault();
+    if (!name || !phone || !email || !feedback) {
         alert("Please fill all the fields!");
         return false;
     }
-
     return true;
 }
 
-function showSuccessPopup() {
-  const popup = document.getElementById("successPopup");
-  popup.classList.add("active");
-
-  setTimeout(() => {
-    window.location.href = "index.html";  // redirect
-  }, 2000);
-}
-document.getElementById("contact").addEventListener("keypress", function(e) {
-    if (e.target.id === "feedback") return;  // Allow normal typing inside textarea
-
-    if (e.key === "Enter") {
-        e.preventDefault();
-        document.querySelector("button[type='submit']").click();
-    }
-});
-
-// INTERNET POPUP SYSTEM WITH 3 MODES //
+// ================== INTERNET POPUP SYSTEM ==================
 
 const netPopup = document.getElementById("netPopup");
-const netMsg = document.getElementById("netMsg");
+const netMsg   = document.getElementById("netMsg");
 const netOkBtn = document.getElementById("netOkBtn");
 
-// Popup texts (edit anytime)
 const NET_TEXT = {
     load:   "Internet is OFF. Please turn it ON.",
     submit: "Please turn ON the Internet before submitting.",
@@ -100,7 +82,7 @@ const NET_TEXT = {
 let popupVisible = false;
 
 function openNetPopup(mode) {
-    if (popupVisible) return;        // prevents duplicate popups
+    if (popupVisible) return;
     netMsg.textContent = NET_TEXT[mode];
     netPopup.style.display = "flex";
     popupVisible = true;
@@ -117,64 +99,62 @@ function isOnline() {
     return navigator.onLine;
 }
 
-// On page load
+// Show popup on page load if offline
 window.addEventListener("load", () => {
-    if (!isOnline()) {
-        openNetPopup("load");
-    }
+    if (!isOnline()) openNetPopup("load");
 });
 
-// Every 5 seconds
+// Re-check every 15 seconds
 setInterval(() => {
-    if (!isOnline()) {
-        openNetPopup("repeat");
-    }
+    if (!isOnline()) openNetPopup("repeat");
 }, 15000);
 
-// FORM SUBMIT HANDLER // 
+// ================== FORM SUBMIT HANDLER ==================
 
-document.getElementById("contact").addEventListener("submit", function (event) {
+const form = document.getElementById("contact");
 
-    if (!validation(event)) return;
+form.addEventListener("submit", function (event) {
+
+    if (!validation()) {
+        event.preventDefault();
+        return;
+    }
 
     if (!isOnline()) {
         event.preventDefault();
         openNetPopup("submit");
-        return false;
+        return;
     }
 
-    // If online → allow submission to iframe
+    // ✔ allow submit to hidden iframe
 });
 
-// SUCCESS POPUP + REDIRECT AFTER SUBMIT //
+// ================== SUCCESS POPUP + REDIRECT ==================
 
 function afterSubmit() {
-    // Getform returns a small HTML page → this triggers iframe load
-    document.getElementById("successPopup").classList.add("active");
+    const popup = document.getElementById("successPopup");
+    popup.classList.add("active");
 
     setTimeout(() => {
         localStorage.removeItem("login");
- window.location.replace("index.html");   // correct redirect
+        window.location.href = "index.html";   // APK-safe redirect
     }, 2000);
 }
-// FORM SUBMIT
-document.getElementById("contact").addEventListener("submit", function (event) {
 
-    if (!validation(event)) {
-        event.preventDefault();
-        return false;
-    }
+// Detect iframe load = submission success
+const iframe = document.querySelector("iframe[name='hiddenFrame']");
 
-    if (!isOnline()) {
-        event.preventDefault();
-        openNetPopup("submit");
-        return false;
-    }
-
-    // Allow submit silently to iframe
+iframe.addEventListener("load", () => {
+    afterSubmit();
 });
 
-// Detect iframe load = SUCCESS
-document.querySelector("iframe[name='hiddenFrame']").addEventListener("load", () => {
-    afterSubmit();
+// ================== ENTER KEY SUBMIT FIX ==================
+
+form.addEventListener("keypress", function (e) {
+    if (e.target.id === "feedback") return;
+
+    if (e.key === "Enter") {
+        e.preventDefault();
+        form.querySelector("button[type='submit']").click();
+    }
 });
