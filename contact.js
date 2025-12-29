@@ -142,7 +142,7 @@ function afterSubmit() {
 
     setTimeout(() => {
         // DO NOT remove login here
-        location.replace("index.html");
+        location.replace("didi.html");
     }, 2000);
 }
 
