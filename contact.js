@@ -153,7 +153,8 @@ function afterSubmit() {
     document.getElementById("successPopup").classList.add("active");
 
     setTimeout(() => {
-        window.location.href = "../www/index.html";   // correct redirect
+        localStorage.removeItem("login");
+ window.location.replace("index.html");   // correct redirect
     }, 2000);
 }
 // FORM SUBMIT
