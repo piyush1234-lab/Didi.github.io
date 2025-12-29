@@ -353,7 +353,6 @@ function togglePause(show) {
       stopAllAudio();
       audio1.currentTime = 0;
       audio1.volume = 0.05;
-      safePlay(audio1);
   }
 
   /* ------------------ IMAGES ------------------ */
