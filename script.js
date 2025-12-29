@@ -31,12 +31,24 @@ async function sha256(str) {
 const STORED_HASH = "e9199cc4714b0479ae0d054e1e3745a971bdaa8ee7d860b6882a324f7bfd194e";
 
 async function login() {
-    let pwd = document.getElementById("pwd").value;
+    const name = document.getElementById("in2").value.trim();
+    const pwd  = document.getElementById("pwd").value.trim();
+
+    if (!name) {
+        alert("Username is required");
+        return;
+    }
+
+    if (!pwd) {
+        alert("Password is required");
+        return;
+    }
+
     const hash = await sha256(pwd);
 
     if (hash === STORED_HASH) {
         localStorage.setItem("login", "true");
-        window.location.href = "didi.html";
+        location.replace("didi.html");
     } else {
         alert("Wrong Username or Password!");
     }
