@@ -1,66 +1,75 @@
-// ================== TOUCH & VISUAL EFFECTS ==================
+// ================== PLATFORM DETECTION ==================
+const UA = navigator.userAgent || "";
+const isApp = UA.startsWith("Dalvik/");
+const isBrowser = /Mozilla\/5\.0/.test(UA);
 
+// ================== LOGIN GUARD (BROWSER ONLY) ==================
+if (isBrowser) {
+    const login = localStorage.getItem("login");
+    if (login !== "true") {
+        location.replace("index.html");
+    }
+}
+
+// ================== BACK BUTTON CONTROL (BROWSER ONLY) ==================
+if (isBrowser) {
+    history.pushState({ page: "contact" }, "");
+
+    window.addEventListener("popstate", () => {
+        localStorage.removeItem("login");
+        location.replace("index.html");
+    });
+}
+
+// ================== BFCache SAFETY ==================
+window.addEventListener("pageshow", (e) => {
+    if (e.persisted && isBrowser) {
+        const login = localStorage.getItem("login");
+        if (login !== "true") {
+            location.replace("index.html");
+        }
+    }
+});
+
+// ================== TOUCH & VISUAL EFFECTS ==================
 function tou1(elem) {
     elem.style.background = "white";
     elem.style.color = "#111";
     elem.style.transform = "scale(1.05)";
 }
-
 function touend1(elem) {
     elem.style.background = "rgba(255,255,255,0.15)";
     elem.style.color = "white";
     elem.style.transform = "scale(1)";
 }
-
-function tou11(elem) {
-    elem.style.background = "white";
-    elem.style.color = "#111";
-}
-
-function touend11(elem) {
-    elem.style.background = "rgba(255,255,255,0.15)";
-    elem.style.color = "white";
-}
-
 function inpu(elem) {
     elem.style.background = "white";
     elem.style.color = "black";
 }
-
 function deinpu(elem) {
     elem.style.background = "transparent";
     elem.style.color = "white";
 }
-
 function shad(elem) {
     elem.style.boxShadow = "0 0 20px 15px rgba(255,255,255,0.5)";
     elem.style.border = "2px solid black";
 }
-
 function deshad(elem) {
     elem.style.boxShadow = "none";
     elem.style.border = "none";
 }
 
-function deshad1(elem) {
-    elem.style.transform = "scale(1.1)";
-}
-
-function deshad2(elem) {
-    elem.style.transform = "scale(1)";
-}
-
 // ================== FORM VALIDATION ==================
-
 function validation() {
     const form = document.getElementById("contact");
+    if (!form) return false;
 
-    const name = form.name.value.trim();
-    const phone = form.phone.value.trim();
-    const email = form.email.value.trim();
-    const feedback = form.feedback.value.trim();
-
-    if (!name || !phone || !email || !feedback) {
+    if (
+        !form.name.value.trim() ||
+        !form.phone.value.trim() ||
+        !form.email.value.trim() ||
+        !form.feedback.value.trim()
+    ) {
         alert("Please fill all the fields!");
         return false;
     }
@@ -68,13 +77,12 @@ function validation() {
 }
 
 // ================== INTERNET POPUP SYSTEM ==================
-
 const netPopup = document.getElementById("netPopup");
-const netMsg   = document.getElementById("netMsg");
+const netMsg = document.getElementById("netMsg");
 const netOkBtn = document.getElementById("netOkBtn");
 
 const NET_TEXT = {
-    load:   "Internet is OFF. Please turn it ON.",
+    load: "Internet is OFF. Please turn it ON.",
     submit: "Please turn ON the Internet before submitting.",
     repeat: "Still offline… Please reconnect again."
 };
@@ -93,68 +101,81 @@ function closeNetPopup() {
     popupVisible = false;
 }
 
-netOkBtn.addEventListener("click", closeNetPopup);
+if (netOkBtn) netOkBtn.addEventListener("click", closeNetPopup);
 
 function isOnline() {
     return navigator.onLine;
 }
 
-// Show popup on page load if offline
 window.addEventListener("load", () => {
     if (!isOnline()) openNetPopup("load");
 });
 
-// Re-check every 15 seconds
 setInterval(() => {
     if (!isOnline()) openNetPopup("repeat");
 }, 15000);
 
-// ================== FORM SUBMIT HANDLER ==================
-
+// ================== FORM SUBMIT ==================
 const form = document.getElementById("contact");
 
-form.addEventListener("submit", function (event) {
+if (form) {
+    form.addEventListener("submit", (event) => {
 
-    if (!validation()) {
-        event.preventDefault();
-        return;
-    }
+        if (!validation()) {
+            event.preventDefault();
+            return;
+        }
 
-    if (!isOnline()) {
-        event.preventDefault();
-        openNetPopup("submit");
-        return;
-    }
+        if (!isOnline()) {
+            event.preventDefault();
+            openNetPopup("submit");
+            return;
+        }
 
-    // ✔ allow submit to hidden iframe
-});
+        // allow submit to iframe
+    });
 
-// ================== SUCCESS POPUP + REDIRECT ==================
+    form.addEventListener("keypress", (e) => {
+        if (e.target.id === "feedback") return;
+        if (e.key === "Enter") {
+            e.preventDefault();
+            form.querySelector("button[type='submit']").click();
+        }
+    });
+}
 
+// ================== SUCCESS + REDIRECT ==================
 function afterSubmit() {
     const popup = document.getElementById("successPopup");
-    popup.classList.add("active");
+    if (popup) popup.classList.add("active");
 
     setTimeout(() => {
-        localStorage.removeItem("login");
-        window.location.href = "index.html";   // APK-safe redirect
+        if (isBrowser) {
+            localStorage.removeItem("login");
+        }
+        location.replace("index.html");
     }, 2000);
 }
 
-// Detect iframe load = submission success
 const iframe = document.querySelector("iframe[name='hiddenFrame']");
+if (iframe) {
+    iframe.addEventListener("load", afterSubmit);
+}
 
-iframe.addEventListener("load", () => {
-    afterSubmit();
-});
+// ================== AUTO EXIT AFTER 2 MIN (LIKE didi.js) ==================
+const AUTO_EXIT_DELAY = 2 * 60 * 1000;
+const HIDDEN_KEY = "contactHiddenAt";
 
-// ================== ENTER KEY SUBMIT FIX ==================
+document.addEventListener("visibilitychange", () => {
+    if (document.hidden) {
+        localStorage.setItem(HIDDEN_KEY, Date.now());
+    } else {
+        const hiddenAt = Number(localStorage.getItem(HIDDEN_KEY));
+        localStorage.removeItem(HIDDEN_KEY);
 
-form.addEventListener("keypress", function (e) {
-    if (e.target.id === "feedback") return;
-
-    if (e.key === "Enter") {
-        e.preventDefault();
-        form.querySelector("button[type='submit']").click();
+        if (isBrowser && hiddenAt && Date.now() - hiddenAt >= AUTO_EXIT_DELAY) {
+            localStorage.removeItem("login");
+            location.replace("index.html");
+        }
     }
 });
