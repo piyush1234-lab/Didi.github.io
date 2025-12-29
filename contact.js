@@ -5,26 +5,16 @@ const isBrowser = /Mozilla\/5\.0/.test(UA);
 
 // ================== LOGIN GUARD (BROWSER ONLY) ==================
 if (isBrowser) {
-    const login = localStorage.getItem("login");
+    const login = localStorage.getItem("login");   // <-- LOGIN CHECK
     if (login !== "true") {
         location.replace("index.html");
     }
 }
 
-// ================== BACK BUTTON CONTROL (BROWSER ONLY) ==================
-if (isBrowser) {
-    history.pushState({ page: "contact" }, "");
-
-    window.addEventListener("popstate", () => {
-        localStorage.removeItem("login");
-        location.replace("index.html");
-    });
-}
-
-// ================== BFCache SAFETY ==================
+// ================== BFCache SAFETY (BROWSER ONLY) ==================
 window.addEventListener("pageshow", (e) => {
     if (e.persisted && isBrowser) {
-        const login = localStorage.getItem("login");
+        const login = localStorage.getItem("login");   // <-- LOGIN CHECK
         if (login !== "true") {
             location.replace("index.html");
         }
@@ -90,13 +80,14 @@ const NET_TEXT = {
 let popupVisible = false;
 
 function openNetPopup(mode) {
-    if (popupVisible) return;
+    if (popupVisible || !netPopup) return;
     netMsg.textContent = NET_TEXT[mode];
     netPopup.style.display = "flex";
     popupVisible = true;
 }
 
 function closeNetPopup() {
+    if (!netPopup) return;
     netPopup.style.display = "none";
     popupVisible = false;
 }
@@ -150,9 +141,7 @@ function afterSubmit() {
     if (popup) popup.classList.add("active");
 
     setTimeout(() => {
-        if (isBrowser) {
-            localStorage.removeItem("login");
-        }
+        // DO NOT remove login here
         location.replace("index.html");
     }, 2000);
 }
@@ -162,7 +151,7 @@ if (iframe) {
     iframe.addEventListener("load", afterSubmit);
 }
 
-// ================== AUTO EXIT AFTER 2 MIN (LIKE didi.js) ==================
+// ================== AUTO EXIT AFTER 2 MIN (ONLY PLACE LOGIN IS CLEARED) ==================
 const AUTO_EXIT_DELAY = 2 * 60 * 1000;
 const HIDDEN_KEY = "contactHiddenAt";
 
@@ -174,7 +163,7 @@ document.addEventListener("visibilitychange", () => {
         localStorage.removeItem(HIDDEN_KEY);
 
         if (isBrowser && hiddenAt && Date.now() - hiddenAt >= AUTO_EXIT_DELAY) {
-            localStorage.removeItem("login");
+            localStorage.removeItem("login");   // <-- ONLY LOGIN REMOVAL
             location.replace("index.html");
         }
     }
