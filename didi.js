@@ -1465,7 +1465,10 @@ const HIDDEN_KEY = "hiddenAt";
 
 document.addEventListener("visibilitychange", () => {
     if (document.hidden) {
-        localStorage.setItem(HIDDEN_KEY, Date.now());
+
+        if (!localStorage.getItem(HIDDEN_KEY)) {
+            localStorage.setItem(HIDDEN_KEY, Date.now());
+        }
 
         stopAllAudio();
 
@@ -1474,8 +1477,7 @@ document.addEventListener("visibilitychange", () => {
             pauseMenu.style.display = "block";
         }
 
-        // close slide panel safely
-        if (document.hidden && panelOpened) {
+        if (panelOpened) {
             closeSlidePanel();
         }
 
@@ -1485,7 +1487,11 @@ document.addEventListener("visibilitychange", () => {
 
         if (hiddenAt && Date.now() - hiddenAt >= AUTO_EXIT_DELAY) {
             stopAllAudio();
-            localStorage.removeItem("login");
+
+            if (isBrowser) {
+                localStorage.removeItem("login");
+            }
+
             location.replace("index.html");
             return;
         }
