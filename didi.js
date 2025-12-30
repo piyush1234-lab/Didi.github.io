@@ -163,7 +163,7 @@ const params = new URLSearchParams(window.location.search);
           window.location.href = "index.html";
       }
       }
-      
+
 // -------- Elements --------
   const canvas = document.getElementById('gameCanvas');
   const ctx = canvas.getContext('2d');
@@ -190,7 +190,7 @@ const params = new URLSearchParams(window.location.search);
 
   const audio2 = new Audio("audio2.wav");  // jump
   audio2.volume= 0.08;
-  
+
   const audio3 = new Audio("audio3.wav");  // hit obstacle
 
   const audio4 = new Audio("audio4.mp3");  // boss warning
@@ -364,7 +364,7 @@ bgImg.src = "background.jpg";
   const obstacleImg = new Image(); obstacleImg.src = "obstacle.png";
   const bossImg = new Image(); bossImg.src = "boss_monster.jpeg";
   const bulletImg = new Image(); bulletImg.src = "bullet.png";
-  
+
 
   /* ------------------ GAME STATE ------------------ */
 
@@ -390,7 +390,11 @@ let groundSlowFactor = 1; // 1 → moving, 0 → stopped
   let isPreBossFire = false;
 
   let BOSS_SCORE_THRESHOLD = 250;
-  let boss = null, bossIntro = false, inBossPhase = false, allowObstacles = true;
+  let boss = null,
+  bossIntro = false,
+  inBossPhase = false,
+  allowObstacles = true;
+  
 
   let gameOver = false;
   // ----- Jump hint control -----
@@ -401,35 +405,52 @@ let hintActive = false;
   /* ------------------ DUST PARTICLES ------------------ */
 
   function spawnDust(x, y) {
-      const angle = (Math.random() * 0.6) - 0.3;
-      dustParticles.push({
-          x,
-          y: y - 4 * visualScale,
-          r: (3 + Math.random() * 7) * visualScale,
-          vx: (-1.5 - Math.random() * 1.2) + Math.cos(angle) * 0.4,
-          vy: (Math.random() * -0.4),
-          life: 450 + Math.random() * 120,
-          start: performance.now(),
-          shapeOffset: Math.random() * Math.PI * 2,
-          shrink: 0.92 + Math.random() * 0.05,
-          color: `rgba(${180 + Math.random()*30}, ${160 + Math.random()*25}, ${120 + Math.random()*20}, 1)`
-      });
-  }
+    const angle = (Math.random() * 0.6) - 0.3;
+    const r = 130 + Math.random() * 30;
+const g = 70 + Math.random() * 25;
+const b = 40 + Math.random() * 20;
 
-  function updateDust(now) {
-      for (let i = dustParticles.length - 1; i >= 0; i--) {
-          const p = dustParticles[i];
-          const t = now - p.start;
-          if (t >= p.life || p.r < 0.5) {
-              dustParticles.splice(i, 1);
-              continue;
-          }
-          p.x += p.vx;
-          p.y += p.vy;
-          p.vy += 0.02;
-          p.r *= p.shrink;
-      }
-  }
+    let vx;
+    let strength = 1;
+
+    if (freezeGround) {
+        strength = 1.6;
+        vx = (Math.random() - 0.5) * 2.4;
+    } else {
+        vx = (-1.5 - Math.random() * 1.2) + Math.cos(angle) * 0.4;
+    }
+
+    dustParticles.push({
+        x,
+        y: y - 4 * visualScale,
+        r: (3 + Math.random() * 7) * visualScale * strength,
+        vx,
+        vy: (-0.8 - Math.random() * 0.6),
+        life: (450 + Math.random() * 120) * strength,
+        start: performance.now(),
+        shapeOffset: Math.random() * Math.PI * 2,
+        shrink: 0.96 + Math.random() * 0.02,
+        color: `rgba(${r}, ${g}, ${b}, 1)`
+    });
+}
+  function updateDust(delta) {
+    const dt = delta / 16; // normalize to 60fps
+
+    for (let i = dustParticles.length - 1; i >= 0; i--) {
+        const p = dustParticles[i];
+
+        const age = performance.now() - p.start;
+        if (age >= p.life || p.r < 0.5) {
+            dustParticles.splice(i, 1);
+            continue;
+        }
+
+        p.x += p.vx * dt;   // ✅ frame-rate independent
+        p.y += p.vy * dt;
+        p.vy += 0.06 * dt;  // gravity scaled
+        p.r *= p.shrink;
+    }
+}
 function drawSky() {
     if (!bgImg.complete) return;
 
@@ -439,24 +460,40 @@ function drawSky() {
     ctx.drawImage(bgImg, x + width, 0, width, height);
 }
   function drawDust() {
-      const now = performance.now();
-      for (const p of dustParticles) {
-          const t = (now - p.start) / p.life;
-          const alpha = Math.max(0, 1 - t);
-          const size = p.r;
-          ctx.save();
-          ctx.globalAlpha = alpha * 0.8;
-          ctx.fillStyle = p.color;
-          ctx.beginPath();
-          ctx.ellipse(p.x, p.y, size * 1.2, size * 0.6, 0, 0, Math.PI * 2);
-          ctx.ellipse(p.x - size * 0.6, p.y + size * 0.2, size * 0.9, size * 0.45, 0, 0, Math.PI * 2);
-          ctx.ellipse(p.x + size * 0.6, p.y + size * 0.15, size * 0.95, size * 0.55, 0, 0, Math.PI * 2);
-          ctx.ellipse(p.x, p.y, size * (1.1 + Math.sin(p.shapeOffset)*0.15), size * 0.6, 0, 0, Math.PI * 2);
-          ctx.fill();
-          ctx.restore();
-      }
-  }
+    const now = performance.now();
 
+    for (const p of dustParticles) {
+        const t = (now - p.start) / p.life;
+        const alpha = Math.max(0, 1 - t);
+        const size = p.r;
+
+        ctx.save();
+
+        // 🔥 Glow / depth
+        ctx.shadowColor = "rgba(0,0,0,0.35)";
+        ctx.shadowBlur = 6 * visualScale;
+
+        ctx.globalAlpha = Math.min(1, alpha * 1.2);
+        ctx.fillStyle = p.color;
+
+        ctx.beginPath();
+        ctx.ellipse(p.x, p.y, size * 1.2, size * 0.6, 0, 0, Math.PI * 2);
+        ctx.ellipse(p.x - size * 0.6, p.y + size * 0.2, size * 0.9, size * 0.45, 0, 0, Math.PI * 2);
+        ctx.ellipse(p.x + size * 0.6, p.y + size * 0.15, size * 0.95, size * 0.55, 0, 0, Math.PI * 2);
+        ctx.ellipse(
+            p.x,
+            p.y,
+            size * (1.1 + Math.sin(p.shapeOffset) * 0.15),
+            size * 0.6,
+            0,
+            0,
+            Math.PI * 2
+        );
+        ctx.fill();
+
+        ctx.restore(); // ✅ resets shadow automatically
+    }
+}
   /* ------------------ LAYOUT / RESIZE ------------------ */
 
   function getGroundY() {
@@ -494,7 +531,7 @@ function drawSky() {
           ob.y = getGroundY() - ob.h;
       }
   }
-  
+
 window.__gameResize__ = resize;
   /* ------------------ INIT GAME ------------------ */
 
@@ -605,8 +642,9 @@ document.body.style.background = "#87ceeb"; // fallback sky color
       const ground = getGroundY();
       if (player.y + player.h >= ground) {
           if (!player.grounded) {
-              for (let i = 0; i < 6; i++) {
-                  spawnDust(player.x + player.w * 0.5, ground);
+              const dustCount = freezeGround ? 8 : 5;
+for (let i = 0; i < dustCount; i++) {
+    spawnDust(player.x + player.w * 0.5, ground);
               }
           }
           player.y = ground - player.h;
@@ -795,32 +833,38 @@ document.body.style.background = "#87ceeb"; // fallback sky color
 
     const dt = delta / 16;
 
+    // 🔥 COLLISION MUST ALWAYS BE CHECKED
+    if (collides(player, boss)) {
+        safePlay(audio3);
+        safeVibrate([200, 60, 200]);
+        AUDIO_BOSS_WINS();
+        endGame("U Can't Ever Defeat Modi Even In Game Also");
+        return;
+    }
+
     // ---- ENTRY PHASE ----
     if (!freezeGround) {
         boss.x += boss.vx * dt;
 
-        // Freeze ground at arena
         if (boss.x <= boss.targetX) {
-    boss.x = boss.targetX;
-    freezeGround = true;
-
-    groundSlowFactor = 1; // 🔥 lock current normal speed
-    boss.vx = -2;
-}     return;
+            boss.x = boss.targetX;
+            freezeGround = true;
+            boss.vx = -2;
+        }
+        return;
     }
 
-    // ---- FIRST FULL LEFT SWEEP ----
+    // ---- FIRST LEFT SWEEP ----
     if (!boss.hasReachedLeft) {
         boss.x += boss.vx * dt;
 
         if (boss.x <= 60) {
             boss.x = 60;
             boss.hasReachedLeft = true;
-            boss.vx = 2; // now start normal patrol
+            boss.vx = 2;
         }
         return;
-    }
-
+    }        
     // ---- NORMAL PATROL (LEFT ↔ RIGHT) ----
     boss.x += boss.vx * dt;
 
@@ -1033,7 +1077,7 @@ document.body.style.background = "#87ceeb"; // fallback sky color
 
       const delta = now - lastTime;
       lastTime = now;
-      
+
       if (
           canvas.width !== Math.floor(width * deviceRatio) ||
           canvas.height !== Math.floor(height * deviceRatio)
@@ -1044,7 +1088,7 @@ document.body.style.background = "#87ceeb"; // fallback sky color
       }
 
  ctx.clearRect(0, 0, width, height);
- 
+
 // ---- SKY PARALLAX (slow & smooth) ----
 const SKY_TARGET_SCORE = 250;
 
@@ -1093,7 +1137,7 @@ drawGround();
           updateObstacles(delta);
           updateBullets(delta);
           updateExplosions(performance.now());
-          updateDust(performance.now());
+          updateDust(delta);
           autoFire(delta);
 
           if (!inBossPhase && Math.floor(score) >= BOSS_SCORE_THRESHOLD) {
@@ -1117,7 +1161,7 @@ drawGround();
     drawPlayer();
 
     updateExplosions(performance.now());
-    updateDust(performance.now());
+    updateDust(delta);
     return;
 }       
                     drawDust();
@@ -1210,7 +1254,7 @@ function resetOverlayStyle() {
       safePlay(audio9);
       audio9.pause();
       audio9.currentTime = 0;
-      
+
       if (!paused && running) {
     safePlay(audio1);
 }
@@ -1403,7 +1447,7 @@ if (isBrowser) {
         });
     });        
 }); 
-  
+
  /* ------------------ INSTAGRAM HEADER CLICK ------------------ */
 
   const INSTAGRAM_USERNAME = "#";
