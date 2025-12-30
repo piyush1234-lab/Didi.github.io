@@ -186,7 +186,7 @@ const params = new URLSearchParams(window.location.search);
 
   const audio1 = new Audio("audio1.mp3");  // background
   audio1.loop = true;
-  audio1.volume = 0.05;
+  audio1.volume = 0.06;
 
   const audio2 = new Audio("audio2.wav");  // jump
   audio2.volume= 0.08;
