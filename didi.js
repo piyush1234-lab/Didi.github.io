@@ -1501,20 +1501,43 @@ document.addEventListener("visibilitychange", () => {
 });
 })(); // end IIFE
 
-function closeSlidePanel() {
-    slidePanel.classList.remove("open");
-    panelOpened = false;
-}
-
+// ================= SLIDE PANEL LOGIC =================
 let panelOpened = false;
+let panelAutoCloseTimer = null;
 
-const slidePanel = document.getElementById("slidePanel");
-const slideTab = document.getElementById("slideTab");
+const PANEL_IDLE_TIME = 2500; // 1.5 seconds
+
+// elements
+const slidePanel   = document.getElementById("slidePanel");
+const slideTab     = document.getElementById("slideTab");
 const slideContent = document.getElementById("slideContent");
 
 const redirectURL = "contact.html";
 
-// TAB CLICK → open/close ONLY
+// ---------------- AUTO CLOSE HELPERS ----------------
+function startPanelAutoCloseTimer() {
+    clearTimeout(panelAutoCloseTimer);
+
+    panelAutoCloseTimer = setTimeout(() => {
+        if (panelOpened) {
+            closeSlidePanel();
+        }
+    }, PANEL_IDLE_TIME);
+}
+
+function resetPanelAutoCloseTimer() {
+    if (!panelOpened) return;
+    startPanelAutoCloseTimer();
+}
+
+// ---------------- OPEN / CLOSE ----------------
+function closeSlidePanel() {
+    slidePanel.classList.remove("open");
+    panelOpened = false;
+    clearTimeout(panelAutoCloseTimer);
+}
+
+// ---------------- TAB CLICK ----------------
 slideTab.addEventListener("click", (e) => {
     e.stopPropagation();
 
@@ -1523,25 +1546,29 @@ slideTab.addEventListener("click", (e) => {
     } else {
         slidePanel.classList.add("open");
         panelOpened = true;
+        startPanelAutoCloseTimer(); // ⏱ start idle timer
     }
 });
 
-// click anywhere outside → close panel
+// ---------------- OUTSIDE CLICK ----------------
 document.addEventListener("click", () => {
     if (!panelOpened) return;
     closeSlidePanel();
 });
 
-// prevent inside clicks from closing
+// ---------------- PANEL INTERACTION ----------------
 slidePanel.addEventListener("click", (e) => {
     e.stopPropagation();
+    resetPanelAutoCloseTimer(); // 👆 user interacted
 });
 
-// panel content → close + redirect
+// ---------------- PANEL CONTENT ----------------
 slideContent.addEventListener("click", (e) => {
     e.stopPropagation();
+    resetPanelAutoCloseTimer();
 
     if (!panelOpened) return;
+
     closeSlidePanel();
     window.location.href = redirectURL;
 });
