@@ -1475,7 +1475,7 @@ document.addEventListener("visibilitychange", () => {
         }
 
         // close slide panel safely
-        if (panelOpened) {
+        if (document.hidden && panelOpened) {
             closeSlidePanel();
         }
 
@@ -1519,24 +1519,23 @@ slideTab.addEventListener("click", (e) => {
         panelOpened = true;
     }
 });
+
+// click anywhere outside → close panel
 document.addEventListener("click", () => {
-    if (panelOpened) {
-        closeSlidePanel();
-    }
+    if (!panelOpened) return;
+    closeSlidePanel();
 });
+
+// prevent inside clicks from closing
 slidePanel.addEventListener("click", (e) => {
     e.stopPropagation();
 });
-slideContent.addEventListener("click", () => {
-    if (!panelOpened) return;
 
+// panel content → close + redirect
+slideContent.addEventListener("click", (e) => {
+    e.stopPropagation();
+
+    if (!panelOpened) return;
     closeSlidePanel();
     window.location.href = redirectURL;
 });
-
-// CONTENT CLICK → redirect ONLY when open
-slideContent.addEventListener("click", () => {
-    if (panelOpened) {
-        window.location.href = redirectURL;
-    }
-});    
