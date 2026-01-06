@@ -16,7 +16,7 @@ body {
     width: 100%;
     min-height: 100dvh;      /* dynamic viewport (Chrome/WebView fix) */
 
-    background-image: url("background.jpg");
+    background-image: url("background.webp");
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
