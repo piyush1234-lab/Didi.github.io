@@ -64,7 +64,7 @@ window.addEventListener("load", async () => {
 
     // 🔥 FIX #3: re-sync canvas after popup
     setTimeout(() => {
-    if (window.__gameResize__) window.__gameResize__();
+    window.__GAME_API__?.resize();
 }, 50);
     if (isApp) {
         const url = "https://piyush1234-lab.github.io/Didi.github.io/didi.html?apk=1";
@@ -96,9 +96,9 @@ window.addEventListener("load", async () => {
 
     // 🔥 FIX #3: re-sync canvas after popup
     setTimeout(() => {
-        if (typeof resize === "function") resize();
-    }, 50);
-    }
+    window.__GAME_API__?.resize();
+}, 50);
+}
 };
 document.addEventListener("DOMContentLoaded", () => {
     // -------- Loader logic --------
@@ -209,9 +209,6 @@ const params = new URLSearchParams(window.location.search);
   const audio9 = new Audio("audio9.mp3");  // calm post blast
   audio9.loop = false;
 
-
-  /* ------------------ VIBRATION (navigator.vibrate ONLY) ------------------ */
-
   function safeVibrate(pattern) {
       if (!navigator.vibrate) return;
       const p = Array.isArray(pattern) ? pattern : [pattern];
@@ -270,38 +267,53 @@ function stopAllAudio() {
             try { a.pause(); } catch (e) {}
         });
 }
+function resumeGameAudio() {
+
+    // Boss phase music
+    if (inBossPhase && boss && !gameOver) {
+        try {
+            audio5.currentTime = audio5.currentTime || 0;
+            safePlay(audio5);
+        } catch (e) {}
+        return;
+    }
+
+    // Normal gameplay music
+    if (running && !gameOver) {
+        try {
+            safePlay(audio1);
+        } catch (e) {}
+    }
+}
 
 function togglePause(show) {
     if (gameOver) return;
 
     paused = show;
-    pauseMenu.style.display = show ? 'block' : 'none';
+    pauseMenu.style.display = show ? "block" : "none";
 
     if (show) {
-        // ⏸ PAUSE
-        cancelJumpHint(false); // preserve remaining hint time
         pauseAllAudio();
+        running = false;
+        cancelJumpHint(false);
+        return;
+    }
 
-    } else {
-        // ▶ RESUME
-        lastTime = performance.now();
-        running = true;
+    // ▶ RESUME
+    paused = false;
+    running = true;
+    lastTime = performance.now();
 
-        if (userGestureDone) safePlay(audio1);
+    resumeGameAudio(); // 🔥 THIS IS THE FIX
 
-        // Resume tutorial ONLY if time remains
-        if (hintRemaining > 0 && !gameOver) {
-            showJumpHint();
-        }
+    if (hintRemaining > 0 && !gameOver) {
+        showJumpHint();
+    }
 
-        if (!rafId) {
-            rafId = requestAnimationFrame(loop);
-        }
+    if (!rafId) {
+        rafId = requestAnimationFrame(loop);
     }
 }
-
-  /* ------------------ AUDIO TIMELINE HOOKS ------------------ */
-
   function AUDIO_START_GAMEPLAY() {
       audio1.currentTime = 0;
       audio1.volume = 0.05;
@@ -354,16 +366,26 @@ function togglePause(show) {
       audio1.currentTime = 0;
       audio1.volume = 0.05;
   }
+function trackImage(img) {
+  return new Promise(resolve => {
+    if (img.complete && img.naturalWidth > 0) return resolve();
 
+    img.onload = resolve;
+    img.onerror = () => {
+      img.src = img.src.split("?")[0] + "?t=" + Date.now();
+      setTimeout(resolve, 500);
+    };
+  });
+}
   /* ------------------ IMAGES ------------------ */
 
-  const groundImg = new Image(); groundImg.src = "ground.jpg";
+  const groundImg = new Image(); groundImg.src = "ground.webp";
   const bgImg = new Image();
-bgImg.src = "background.jpg";
-  const playerImg = new Image(); playerImg.src = "character.png";
-  const obstacleImg = new Image(); obstacleImg.src = "obstacle.png";
-  const bossImg = new Image(); bossImg.src = "boss_monster.jpeg";
-  const bulletImg = new Image(); bulletImg.src = "bullet.png";
+bgImg.src = "background.webp";
+  const playerImg = new Image(); playerImg.src = "character.webp";
+  const obstacleImg = new Image(); obstacleImg.src = "obstacle.webp";
+  const bossImg = new Image(); bossImg.src = "boss_monster.webp";
+  const bulletImg = new Image(); bulletImg.src = "bullet.webp";
 
 
   /* ------------------ GAME STATE ------------------ */
@@ -372,10 +394,13 @@ bgImg.src = "background.jpg";
       height = innerHeight,
       deviceRatio = Math.max(1, window.devicePixelRatio || 1);
   let visualScale = 1;
+  let lastVisualScale = visualScale;
   let groundHeight = 90;
+  let freezeCanvasAfterBlast = false;
   let freezeGround = false;
 let groundSlowFactor = 1; // 1 → moving, 0 → stopped
   let skyOffset=0;
+  let useCanvasSky=true;
   let groundOffset=0;
   let running = false, paused = false, started = false, userGestureDone = false;
   let score = 0;
@@ -394,7 +419,7 @@ let groundSlowFactor = 1; // 1 → moving, 0 → stopped
   bossIntro = false,
   inBossPhase = false,
   allowObstacles = true;
-  
+
 
   let gameOver = false;
   // ----- Jump hint control -----
@@ -452,10 +477,10 @@ const b = 40 + Math.random() * 20;
     }
 }
 function drawSky() {
+    if (!useCanvasSky) return;
     if (!bgImg.complete) return;
 
     const x = skyOffset % width;
-
     ctx.drawImage(bgImg, x, 0, width, height);
     ctx.drawImage(bgImg, x + width, 0, width, height);
 }
@@ -500,43 +525,70 @@ function drawSky() {
       return height - groundHeight;
   }
 
-  function resize() {
-      width = window.innerWidth;
-      height = window.innerHeight;
-      deviceRatio = Math.max(1, window.devicePixelRatio || 1);
+function resize() {
+    const oldWidth = width;
+    const oldHeight = height;
 
-      canvas.style.width = width + "px";
-      canvas.style.height = height + "px";
-      canvas.width = Math.floor(width * deviceRatio);
-      canvas.height = Math.floor(height * deviceRatio);
-      ctx.setTransform(deviceRatio, 0, 0, deviceRatio, 0, 0);
+    width  = window.innerWidth  || 360;
+height = window.innerHeight || 640;
 
-      visualScale = Math.min(width, Math.max(560, height)) / 900;
-      groundHeight = Math.max(70, 90 * visualScale);
+    deviceRatio = Math.max(1, window.devicePixelRatio || 1);
 
-      if (player) {
-          const gY = getGroundY();
-          if (player.y + player.h > gY) {
-              player.y = gY - player.h;
-              player.vy = 0;
-              player.grounded = true;
-          }
-      }
+    canvas.style.width = width + "px";
+    canvas.style.height = height + "px";
+    canvas.width = Math.floor(width * deviceRatio);
+    canvas.height = Math.floor(height * deviceRatio);
+    ctx.setTransform(deviceRatio, 0, 0, deviceRatio, 0, 0);
 
-      for (let ob of obstacles) {
-          ob.w = Math.max(28, 40 * visualScale * (width < height ? 1 : 0.9));
-          const MAX_H = 80 * visualScale;
-          const MIN_H = 35 * visualScale;
-          ob.h = MIN_H + Math.random() * (MAX_H - MIN_H);
-          ob.y = getGroundY() - ob.h;
-      }
-  }
+const prevVisualScale = visualScale;
+const calcScale = Math.min(width, Math.max(560, height)) / 900;
+visualScale = Math.max(0.4, calcScale); // 🔥 FLOOR (CRITICAL)
+lastVisualScale = visualScale;
 
-window.__gameResize__ = resize;
+    groundHeight = Math.max(70, 90 * visualScale);
+
+    // ---- POSITION RATIOS (CORRECT) ----
+    const rx = width / oldWidth;
+    const ry = height / oldHeight;
+
+    /* ---------- PLAYER ---------- */
+    if (player) {
+        // position → canvas ratio
+        player.x *= rx;
+        player.y *= ry;
+
+        // size → visual scale
+        player.w = 46 * visualScale;
+        player.h = 56 * visualScale;
+
+        player.gravity = 0.9 * visualScale;
+        player.jumpPower = 17 * visualScale;
+
+        const gY = getGroundY();
+        if (player.y + player.h > gY) {
+            player.y = gY - player.h;
+            player.vy = 0;
+            player.grounded = true;
+        }
+    }
+
+    /* ---------- OBSTACLES ---------- */
+    for (let ob of obstacles) {
+        ob.x *= rx;
+        ob.w = Math.max(28, 40 * visualScale * (width < height ? 1 : 0.9));
+        ob.h *= (visualScale / prevVisualScale); // height scale only
+        ob.y = getGroundY() - ob.h;
+    }
+}
+// expose controlled game API
+window.__GAME_API__ = window.__GAME_API__ || {};
+window.__GAME_API__.resize = resize;
   /* ------------------ INIT GAME ------------------ */
 
   function init(fullReset = true) {
     cancelJumpHint();
+    useCanvasSky = true;
+document.body.style.backgroundImage = "";
       resize();
       player = {
           x: 90 * visualScale,
@@ -572,7 +624,6 @@ groundSlowFactor = 1;
       gameOver = false;
 
       overlay.textContent = "Tap / Click / Press Space to start";
-document.body.style.background = "#87ceeb"; // fallback sky color
       overlay.style.display = "block";
       pauseMenu.style.display = "none";
       restartBtn.style.display = "none";
@@ -675,7 +726,7 @@ for (let i = 0; i < dustCount; i++) {
           b.x += b.vx * dt;
 
           if (boss && collides(b, boss)) {
-              boss.hp -= 7;
+              boss.hp -= 8;
               spawnExplosion(b.x, b.y, 40, 350);
               updateBossHpBar();
               bullets.splice(i, 1);
@@ -945,8 +996,7 @@ for (let i = 0; i < dustCount; i++) {
           overlay.style.boxShadow = "0 0 20px rgba(255,140,0,1)";
           overlay.textContent = "A Terror Attack Taken Place";
           overlay.style.display = "block";
-
-          safePlay(audio7);
+          
           AUDIO_BLAST_START();
           safeVibrate([
               320, 70,
@@ -964,9 +1014,14 @@ for (let i = 0; i < dustCount; i++) {
           requestAnimationFrame(() => {
               blastOverlay.style.opacity = '1';
           });
+useCanvasSky = false;
+freezeCanvasAfterBlast = true;
+ctx.clearRect(0, 0, width, height);
+drawGround();
+drawPlayer();
 
-          fadeBackgroundImage("background1.jpg");
-
+// 🔥 LOCK FINAL SKY ON DOM
+document.body.style.backgroundImage = 'url("background1.webp")';
           setTimeout(() => {
               blastOverlay.style.opacity = '0';
               overlay.style.display = "none";
@@ -988,7 +1043,7 @@ for (let i = 0; i < dustCount; i++) {
                   restartBtn.style.display = 'block';
                   exitBtn.style.display = 'block';
                   AUDIO_AFTER_BLAST_MESSAGE();
-              }, 1000);
+              }, 200);
           }, 3000);
       }, 13000);
   }
@@ -1044,14 +1099,17 @@ for (let i = 0; i < dustCount; i++) {
   /* ------------------ OBSTACLE UPDATE ------------------ */
 
   function updateObstacles(delta) {
-      const move = gameSpeed * (delta / 16);
-      for (let i = obstacles.length - 1; i >= 0; i--) {
-          obstacles[i].x -= move;
-          if (obstacles[i].x + obstacles[i].w < -50) {
-              obstacles.splice(i, 1);
-          }
-      }
-  }
+    if (paused) return; // 🔒 prevent removal during resize pause
+
+    const move = gameSpeed * (delta / 16);
+    for (let i = obstacles.length - 1; i >= 0; i--) {
+        obstacles[i].x -= move;
+
+        if (obstacles[i].x + obstacles[i].w < -50) {
+            obstacles.splice(i, 1);
+        }
+    }
+}
 
   /* ------------------ FULLSCREEN BUTTON (WEB ONLY) ------------------ */
 
@@ -1086,9 +1144,6 @@ for (let i = 0; i < dustCount; i++) {
           canvas.height = Math.floor(height * deviceRatio);
           ctx.setTransform(deviceRatio, 0, 0, deviceRatio, 0, 0);
       }
-
- ctx.clearRect(0, 0, width, height);
-
 // ---- SKY PARALLAX (slow & smooth) ----
 const SKY_TARGET_SCORE = 250;
 
@@ -1155,16 +1210,12 @@ drawGround();
           score += delta * 0.01;
           updateScoreDisplay();
       } else {
-    // 🔥 DRAW PLAYER EVEN BEFORE GAME STARTS
-    drawSky();
-    drawGround();
     drawPlayer();
-
     updateExplosions(performance.now());
     updateDust(delta);
     return;
-}       
-                    drawDust();
+}
+          drawDust();
       drawObstacles();
       drawBullets();
       drawPlayer();
@@ -1385,42 +1436,47 @@ if (isBrowser) {
   canvas.addEventListener('touchend', onTouchEnd, { passive: true });
   window.addEventListener('keydown', onKeyDown);
 
-  window.addEventListener('resize', () => {
-      resize();
-      if (started && !gameOver) {
-          paused = true;
-          pauseMenu.style.display = 'block';
-          pauseMenu.setAttribute('aria-hidden', 'false');
-          overlay.style.display = 'none';
-          try { audio1.pause(); } catch (e) {}
-          running = true;
-      }
-  });
+  window.addEventListener("resize", () => {
+    resize(); // ALWAYS resize first
 
-  window.addEventListener('focus', () => {
+    if (started && !gameOver) {
+        paused = true;                 // 🔒 HARD PAUSE
+        running = false;               // ❗ STOP GAME LOGIC
+        pauseMenu.style.display = "block";
+        overlay.style.display = "none";
+
+        cancelJumpHint(false);          // preserve hint time
+        pauseAllAudio();
+
+        lastTime = performance.now();   // prevent delta jump
+    }
+}); 
+ window.addEventListener('focus', () => {
       lastTime = performance.now();
   });
 
   /* ------------------ ASSET PRELOAD THEN INIT ------------------ */
 
   const assets = [
-      new Promise(r => { bgImg.onload = r; bgImg.onerror = r; setTimeout(r, 1200); }),
-      new Promise(r => { groundImg.onload = r; groundImg.onerror = r; setTimeout(r, 1200); }),
-      new Promise(r => { playerImg.onload = r; playerImg.onerror = r; setTimeout(r, 1200); }),
-      new Promise(r => { obstacleImg.onload = r; obstacleImg.onerror = r; setTimeout(r, 1200); }),
-      new Promise(r => { bossImg.onload = r; bossImg.onerror = r; setTimeout(r, 1200); }),
-      new Promise(r => { bulletImg.onload = r; bulletImg.onerror = r; setTimeout(r, 1200); }),
-      new Promise(r => { audio1.oncanplaythrough = r; audio1.onerror = r; setTimeout(r, 1200); }),
-      new Promise(r => { audio2.oncanplaythrough = r; audio2.onerror = r; setTimeout(r, 1200); }),
-      new Promise(r => { audio3.oncanplaythrough = r; audio3.onerror = r; setTimeout(r, 1200); }),
-      new Promise(r => { audio4.oncanplaythrough = r; audio4.onerror = r; setTimeout(r, 1200); }),
-      new Promise(r => { audio5.oncanplaythrough = r; audio5.onerror = r; setTimeout(r, 1200); }),
-      new Promise(r => { audio6.oncanplaythrough = r; audio6.onerror = r; setTimeout(r, 1200); }),
-      new Promise(r => { audio7.oncanplaythrough = r; audio7.onerror = r; setTimeout(r, 1200); }),
-      new Promise(r => { audio8.oncanplaythrough = r; audio8.onerror = r; setTimeout(r, 1200); }),
-      new Promise(r => { audio9.oncanplaythrough = r; audio9.onerror = r; setTimeout(r, 1200); })
-  ];
+  // 🔥 IMAGES (NO TIMEOUTS)
+  trackImage(bgImg),
+  trackImage(groundImg),
+  trackImage(playerImg),
+  trackImage(obstacleImg),
+  trackImage(bossImg),
+  trackImage(bulletImg),
 
+  // 🔊 AUDIO (timeouts OK)
+  new Promise(r => { audio1.oncanplaythrough = r; audio1.onerror = r; setTimeout(r, 1500); }),
+  new Promise(r => { audio2.oncanplaythrough = r; audio2.onerror = r; setTimeout(r, 1500); }),
+  new Promise(r => { audio3.oncanplaythrough = r; audio3.onerror = r; setTimeout(r, 1500); }),
+  new Promise(r => { audio4.oncanplaythrough = r; audio4.onerror = r; setTimeout(r, 1500); }),
+  new Promise(r => { audio5.oncanplaythrough = r; audio5.onerror = r; setTimeout(r, 1500); }),
+  new Promise(r => { audio6.oncanplaythrough = r; audio6.onerror = r; setTimeout(r, 1500); }),
+  new Promise(r => { audio7.oncanplaythrough = r; audio7.onerror = r; setTimeout(r, 1500); }),
+  new Promise(r => { audio8.oncanplaythrough = r; audio8.onerror = r; setTimeout(r, 1500); }),
+  new Promise(r => { audio9.oncanplaythrough = r; audio9.onerror = r; setTimeout(r, 1500); })
+];
 
   Promise.all(assets).then(() => {
 
@@ -1466,16 +1522,16 @@ const HIDDEN_KEY = "hiddenAt";
 document.addEventListener("visibilitychange", () => {
     if (document.hidden) {
 
+        // 🔒 HARD FREEZE GAME LOGIC
+        paused = true;
+        running = false;
+
         if (!localStorage.getItem(HIDDEN_KEY)) {
             localStorage.setItem(HIDDEN_KEY, Date.now());
         }
 
         stopAllAudio();
-
-        if (running && !paused) {
-            paused = true;
-            pauseMenu.style.display = "block";
-        }
+        pauseMenu.style.display = "block";
 
         if (panelOpened) {
             closeSlidePanel();
@@ -1496,12 +1552,12 @@ document.addEventListener("visibilitychange", () => {
             return;
         }
 
+        // ⏱ RESET DELTA TO PREVENT JUMP
         lastTime = performance.now();
     }
 });
 })(); // end IIFE
-
-// ================= SLIDE PANEL LOGIC =================
+    // ================= SLIDE PANEL LOGIC =================
 let panelOpened = false;
 let panelAutoCloseTimer = null;
 
