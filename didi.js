@@ -47,7 +47,7 @@ window.addEventListener("load", async () => {
     if (!box || !txt || !okBtn || !cancelBtn) return;
 
     if (isApp) {
-        txt.innerHTML = `Vibration is not working on this device.<br>For best gameplay, do you want to continue in browser?`;
+        txt.innerHTML = `Vibration is not working in this APK.<br>For best gameplay, u can use browser, do you want to continue to browser?`;
         cancelBtn.style.display = "inline-flex";
     } if(isBrowser) {
         txt.innerHTML = `
@@ -260,7 +260,21 @@ function stopAllAudio() {
           }
       }, 50);
   }
-
+function unlockAllAudio() {
+    [
+        audio1, audio2, audio3, audio4,
+        audio5, audio6, audio7, audio8, audio9
+    ].forEach(a => {
+        try {
+            a.muted = true;
+            a.play().then(() => {
+                a.pause();
+                a.currentTime = 0;
+                a.muted = false;
+            }).catch(() => {});
+        } catch (e) {}
+    });
+}
   function pauseAllAudio() {
     [audio1, audio2, audio3, audio4, audio5, audio6, audio7, audio8, audio9]
         .forEach(a => {
@@ -379,13 +393,13 @@ function trackImage(img) {
 }
   /* ------------------ IMAGES ------------------ */
 
-  const groundImg = new Image(); groundImg.src = "ground.webp";
+  const groundImg = new Image(); groundImg.src = "ground.jpg";
   const bgImg = new Image();
-bgImg.src = "background.webp";
-  const playerImg = new Image(); playerImg.src = "character.webp";
-  const obstacleImg = new Image(); obstacleImg.src = "obstacle.webp";
-  const bossImg = new Image(); bossImg.src = "boss_monster.webp";
-  const bulletImg = new Image(); bulletImg.src = "bullet.webp";
+bgImg.src = "background.jpg";
+  const playerImg = new Image(); playerImg.src = "character.png";
+  const obstacleImg = new Image(); obstacleImg.src = "obstacle.png";
+  const bossImg = new Image(); bossImg.src = "boss_monster.jpeg";
+  const bulletImg = new Image(); bulletImg.src = "bullet.png";
 
 
   /* ------------------ GAME STATE ------------------ */
@@ -545,7 +559,7 @@ const calcScale = Math.min(width, Math.max(560, height)) / 900;
 visualScale = Math.max(0.4, calcScale); // 🔥 FLOOR (CRITICAL)
 lastVisualScale = visualScale;
 
-    groundHeight = Math.max(70, 90 * visualScale);
+    groundHeight = Math.min(150, 400 * visualScale);
 
     // ---- POSITION RATIOS (CORRECT) ----
     const rx = width / oldWidth;
@@ -629,6 +643,7 @@ groundSlowFactor = 1;
       restartBtn.style.display = "none";
       exitBtn.style.display = "none";
       bossHpBar.style.display = "none";
+      bossHpInner.style.width = "100%";
       pauseBtn.style.display = "block";
       blastOverlay.style.display = "none";
       blastOverlay.style.opacity = "0";
@@ -1021,7 +1036,7 @@ drawGround();
 drawPlayer();
 
 // 🔥 LOCK FINAL SKY ON DOM
-document.body.style.backgroundImage = 'url("background1.webp")';
+document.body.style.backgroundImage = 'url("background1.jpg")';
           setTimeout(() => {
               blastOverlay.style.opacity = '0';
               overlay.style.display = "none";
@@ -1300,7 +1315,7 @@ function resetOverlayStyle() {
 
   function onUserGestureStart() {
       userGestureDone = true;
-
+unlockAllAudio();
       audio9.volume = 0;
       safePlay(audio9);
       audio9.pause();
@@ -1376,6 +1391,7 @@ if (!started) {
   restartGameBtn.addEventListener('click', () => {
       stopAllAudio();
       init(true);
+      showVibrationPopup();    
   });
 
   exitGameBtn.addEventListener('click', () => {
@@ -1386,6 +1402,7 @@ if (!started) {
   restartBtn.addEventListener('click', () => {
       AUDIO_RESTART();
       init(true);
+      showVibrationPopup();      
   });
 
   exitBtn.addEventListener('click', () => {
@@ -1522,16 +1539,16 @@ const HIDDEN_KEY = "hiddenAt";
 document.addEventListener("visibilitychange", () => {
     if (document.hidden) {
 
-        // 🔒 HARD FREEZE GAME LOGIC
-        paused = true;
-        running = false;
-
         if (!localStorage.getItem(HIDDEN_KEY)) {
             localStorage.setItem(HIDDEN_KEY, Date.now());
         }
 
         stopAllAudio();
-        pauseMenu.style.display = "block";
+
+        if (running && !paused) {
+            paused = true;
+            pauseMenu.style.display = "block";
+        }
 
         if (panelOpened) {
             closeSlidePanel();
@@ -1552,7 +1569,6 @@ document.addEventListener("visibilitychange", () => {
             return;
         }
 
-        // ⏱ RESET DELTA TO PREVENT JUMP
         lastTime = performance.now();
     }
 });
