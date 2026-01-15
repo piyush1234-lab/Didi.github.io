@@ -12,6 +12,10 @@
  <!-- THIS TEXT WILL BE SET BY JS -->
         <p id="apkVibText">
         </p>
+        <label id="apkNeverWrap" style="display:none; margin-bottom:12px; font-weight:600;">
+  <input type="checkbox" id="apkNeverAgain">
+  Don't show again
+</label>
           <div id="vibrationButton">
             <button id="apkVibOK">OK</button>
 
@@ -24,6 +28,8 @@
   <img src="character1.png" alt="Loading...">
   <div class="progress"><div class="fill" id="loadFill"></div></div>
   <p id="loadPercent">0%</p>
+ <div id="loaderDisclaimer" class="loader-disclaimer"><span style="color:red; font-size: clamp(12px, 2.8vw, 16px);">⚠ DISCLAIMER</span><br>
+This Game Is A Political Meme Game Made For Entertainment Pupose Only. No Real Characters Are Used. Some Copyrighted Music Track Are used On Purpose, This Project Does Not Intend To Hurts Anyone Feelings. If It's Does So, Sorry For That. All The Players Are Requested To Take This Game As An Entertainment Purpose Only.</div> 
 </div>
 
 <header id="topHeader">
@@ -59,10 +65,10 @@
 
     <div id="slideContent">
         <!-- whatever you want inside the opened panel -->
-        <p style="color:white;margin-left:10px;">Suggestion</p>
+        <p id="suggestion">Suggestion</p>
     </div>
 </div>
 <canvas id="gameCanvas"></canvas>
-<script src="didi.js"></script>
+<script src="didi debug1.js"></script>
 </body>
 </html>
