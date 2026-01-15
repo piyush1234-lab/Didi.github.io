@@ -1,49 +1,85 @@
-// ================== PLATFORM DETECTION ==================
+// PLATFORM DETECTION //
 const UA = navigator.userAgent || "";
-const isApp = UA.startsWith("Dalvik/");     // APK
-const isBrowser = /Mozilla\/5\.0/.test(UA); // Normal browser
-const FORCE_POPUP_DEBUG = false;
+// APK //
+const isApp = UA.startsWith("Dalvik/");
+// Normal Browser //
+const isBrowser = /Mozilla\/5\.0/.test(UA);
+// for browser cache storing //
+const VIB_CACHE_KEY = "vibration_support"; 
+// Apk checkbox // 
+const APK_HIDE_KEY  = "apk_vib_dismissed";
+let userGestureDone = false;
 
-// ================== VIBRATION TEST (NO USER ACTION REQUIRED) ==================
-function testVibration() {
-    return new Promise(resolve => {
+// VIBRATION TEST //
+function detectAndCacheVibration() {
+    try {
         if (!navigator.vibrate) {
-            resolve(false);
-            return;
+            localStorage.setItem(VIB_CACHE_KEY, "false");
+            return false;
         }
 
-        try {
-            const result = navigator.vibrate([5, 5, 5]);
-            setTimeout(() => resolve(result === true), 40);
-        } catch {
-            resolve(false);
-        }
-    });
+        const ok = navigator.vibrate(10);
+        localStorage.setItem(VIB_CACHE_KEY, ok ? "true" : "false");
+        return ok;
+    } catch {
+        localStorage.setItem(VIB_CACHE_KEY, "false");
+        return false;
+    }
+}
+function getCachedVibration() {
+    const v = localStorage.getItem(VIB_CACHE_KEY);
+    if (v === "true") return true;
+    if (v === "false") return false;
+    return null; // not tested yet
 }
 
 // ================== SHOW POPUP AFTER LOADER IF VIBRATION FAILS ==================
-window.addEventListener("load", async () => {
-
-    // ---------- APP (Dalvik) ----------
+window.addEventListener("load", () => {
+     // APK //
     if (isApp) {
-    window.__SHOW_VIB_POPUP__ = true;
-    return;
+    if (isApp && !localStorage.getItem(APK_HIDE_KEY)) {
+    showVibrationPopup();
 }
-    // ---------- BROWSER ----------
-    setTimeout(async () => {
-        const works = await testVibration();
-        if (!works) {
-            showVibrationPopup(); // ⏱ after test
-        }
-    }, 10000); // small delay is enough
-});
+        // APK popup handled on restart / init
+        return;
+    }
+    // BROWSER //
+    // BROWSER //
+setTimeout(() => {
+    if (userGestureDone) return;
+
+    const vib = getCachedVibration();
+    if (vib !== true) {
+        showVibrationPopup();
+    }
+}, 10000);
+})
 
     function showVibrationPopup() {
+    if (isApp) {
+        if (localStorage.getItem(APK_HIDE_KEY)) return;
+    }
+
+    // ---------- BROWSER ----------
+    if (isBrowser) {
+        const vib = getCachedVibration();
+        if (vib == true) return;
+    }
+
     const box = document.getElementById("apkVibrationPopup");
     const txt = document.getElementById("apkVibText");
     const okBtn = document.getElementById("apkVibOK");
     const cancelBtn = document.getElementById("apkVibCancel");
+    
+const neverBox = document.getElementById("apkNeverWrap");
+const neverChk = document.getElementById("apkNeverAgain");
 
+if (isApp && neverBox) {
+    neverBox.style.display = "block";
+    if (neverChk) neverChk.checked = false;
+} else if (neverBox) {
+    neverBox.style.display = "none";
+}
     if (!box || !txt || !okBtn || !cancelBtn) return;
 
     if (isApp) {
@@ -60,37 +96,36 @@ window.addEventListener("load", async () => {
     box.style.display = "flex";
 
     okBtn.onclick = () => {
+    const neverChk = document.getElementById("apkNeverAgain");
+
+    if (isApp && neverChk && neverChk.checked) {
+        localStorage.setItem(APK_HIDE_KEY, "true");
+    }
+
     box.style.display = "none";
 
-    // 🔥 FIX #3: re-sync canvas after popup
     setTimeout(() => {
-    window.__GAME_API__?.resize();
-}, 50);
+        window.__GAME_API__?.resize();
+    }, 50);
+
     if (isApp) {
         const url = "https://piyush1234-lab.github.io/Didi.github.io/didi.html?apk=1";
 
-        // 🔥 FORCE ANDROID INTENT (best)
         try {
             if (window.Android && Android.openUrl) {
                 Android.openUrl(url);
                 return;
             }
-        } catch (e) {}
+        } catch {}
 
-        // 🔥 FALLBACK: system intent via _system
         try {
             window.open(url, "_system");
             return;
-        } catch (e) {}
+        } catch {}
 
-        // ❌ LAST RESORT (still inside app)
         location.href = url;
-
-    } else {
-        box.style.display = "none";
     }
 };
-
     cancelBtn.onclick = () => {
     box.style.display = "none";
 
@@ -105,7 +140,8 @@ document.addEventListener("DOMContentLoaded", () => {
     let fakePercent = 0;
     const fill = document.getElementById("loadFill");
     const percentTxt = document.getElementById("loadPercent");
-
+const LOADER_MIN_TIME = 2500; // 2.5 seconds
+let loaderShownAt = performance.now();
     const fake = setInterval(() => {
         fakePercent += Math.random() * 7;
         if (fakePercent > 90) fakePercent = 90;
@@ -119,16 +155,18 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (fill) fill.style.width = "100%";
         if (percentTxt) percentTxt.textContent = "100%";
-
+const elapsed = performance.now() - loaderShownAt;
+    const remaining = Math.max(0, LOADER_MIN_TIME - elapsed);
         setTimeout(() => {
             const loader = document.getElementById("loader");
             if (loader) {
                 loader.style.opacity = "0";
                 setTimeout(() => {
                     loader.style.display = "none";
+                    
                 }, 700);
             }
-        }, 300);
+        }, remaining);
     });
 
     // -------- APK vs Web UI control (fsBtn + topHeader) --------
@@ -160,7 +198,7 @@ const params = new URLSearchParams(window.location.search);
   if (!isApp) {
       const loginStatus = localStorage.getItem("login");
       if (loginStatus !== "true") {
-          window.location.href = "index.html";
+          location.replace("index.html");
       }
       }
 
@@ -189,7 +227,7 @@ const params = new URLSearchParams(window.location.search);
   audio1.volume = 0.06;
 
   const audio2 = new Audio("audio2.wav");  // jump
-  audio2.volume= 0.08;
+  audio2.volume= 0.10;
 
   const audio3 = new Audio("audio3.wav");  // hit obstacle
 
@@ -233,7 +271,6 @@ function stopAllAudio() {
       const p = a.play();
       if (p && p.catch) p.catch(() => {});
   }
-
   function smoothVolume(audio, target, speed = 0.03) {
       clearInterval(audio._fade);
       audio._fade = setInterval(() => {
@@ -260,21 +297,7 @@ function stopAllAudio() {
           }
       }, 50);
   }
-function unlockAllAudio() {
-    [
-        audio1, audio2, audio3, audio4,
-        audio5, audio6, audio7, audio8, audio9
-    ].forEach(a => {
-        try {
-            a.muted = true;
-            a.play().then(() => {
-                a.pause();
-                a.currentTime = 0;
-                a.muted = false;
-            }).catch(() => {});
-        } catch (e) {}
-    });
-}
+
   function pauseAllAudio() {
     [audio1, audio2, audio3, audio4, audio5, audio6, audio7, audio8, audio9]
         .forEach(a => {
@@ -329,10 +352,10 @@ function togglePause(show) {
     }
 }
   function AUDIO_START_GAMEPLAY() {
-      audio1.currentTime = 0;
-      audio1.volume = 0.05;
-      safePlay(audio1);
-  }
+    audio1.currentTime = 0;
+    audio1.volume = 0.05;
+    safePlay(audio1);
+}
 
   function AUDIO_BOSS_WARNING() {
       smoothVolume(audio1, 0.12);
@@ -363,11 +386,15 @@ function togglePause(show) {
   }
 
   function AUDIO_BLAST_START() {
-      audio8.currentTime = 0;
-      safePlay(audio8);
-  }
+    audio8.currentTime = 0;
+    audio8.volume = 1;
 
+    setTimeout(() => {
+        safePlay(audio8);
+    }, 10); // 🔥 gives priority over vibration
+}
   function AUDIO_AFTER_BLAST_MESSAGE() {
+   
       audio8.pause();
       audio8.currentTime = 0;
       audio9.currentTime = 0;
@@ -416,36 +443,54 @@ let groundSlowFactor = 1; // 1 → moving, 0 → stopped
   let skyOffset=0;
   let useCanvasSky=true;
   let groundOffset=0;
-  let running = false, paused = false, started = false, userGestureDone = false;
+  let running = false, paused = false, started = false;
   let score = 0;
   let lastTime = performance.now(), rafId = null;
-
   let player = null;
   let obstacles = [], bullets = [], explosions = [], dustParticles = [];
   let spawnTimer = 0, spawnInterval = 1300, gameSpeed = 4;
-
   let fireTimer = 0;
   const FIRE_INTERVAL = 500;
   let isPreBossFire = false;
-
   let BOSS_SCORE_THRESHOLD = 250;
-  let boss = null,
-  bossIntro = false,
-  inBossPhase = false,
-  allowObstacles = true;
-
-
+  let boss = null,bossIntro = false,inBossPhase = false,allowObstacles = true;
   let gameOver = false;
+  
   // ----- Jump hint control -----
 let hintTimeout = null;
 let hintFadeTimeout = null;
 let hintActive = false;
 
-  /* ------------------ DUST PARTICLES ------------------ */
+// === ORIENTATION + BOSS PHYSICS === //
+const PHYSICS = {
+portrait: {
+        groundScale: 1.0,
+        jump: 18,
+        gravity: 0.9
+        },
+landscape: {
+        groundScale: 1.0,
+        jump: 13,
+        gravity: 0.55
+        },
+boss: {
+   portrait: {
+        jump: 20,
+        gravity: 0.70
+        },
+   landscape: {
+        jump: 16,
+        gravity: 0.40
+        }
+      }
+};
+           // --- DUST PARTICLES --- //
+const MAX_DUST = 120;
 
-  function spawnDust(x, y) {
-    const angle = (Math.random() * 0.6) - 0.3;
-    const r = 130 + Math.random() * 30;
+function spawnDust(x, y) {
+if (dustParticles.length >= MAX_DUST) return;
+const angle = (Math.random() * 0.6) - 0.3;
+const r = 130 + Math.random() * 30;
 const g = 70 + Math.random() * 25;
 const b = 40 + Math.random() * 20;
 
@@ -472,8 +517,8 @@ const b = 40 + Math.random() * 20;
         color: `rgba(${r}, ${g}, ${b}, 1)`
     });
 }
-  function updateDust(delta) {
-    const dt = delta / 16; // normalize to 60fps
+function updateDust(delta) {
+const dt = delta / 16; // normalize to 60fps
 
     for (let i = dustParticles.length - 1; i >= 0; i--) {
         const p = dustParticles[i];
@@ -482,12 +527,11 @@ const b = 40 + Math.random() * 20;
         if (age >= p.life || p.r < 0.5) {
             dustParticles.splice(i, 1);
             continue;
-        }
-
-        p.x += p.vx * dt;   // ✅ frame-rate independent
-        p.y += p.vy * dt;
-        p.vy += 0.06 * dt;  // gravity scaled
-        p.r *= p.shrink;
+            }
+            p.x += p.vx * dt;
+            p.y += p.vy * dt;
+            p.vy += 0.06 * dt;  // gravity scaled
+            p.r *= p.shrink;
     }
 }
 function drawSky() {
@@ -498,17 +542,15 @@ function drawSky() {
     ctx.drawImage(bgImg, x, 0, width, height);
     ctx.drawImage(bgImg, x + width, 0, width, height);
 }
-  function drawDust() {
-    const now = performance.now();
+function drawDust() {
+const now = performance.now();
 
-    for (const p of dustParticles) {
-        const t = (now - p.start) / p.life;
-        const alpha = Math.max(0, 1 - t);
-        const size = p.r;
-
-        ctx.save();
-
-        // 🔥 Glow / depth
+for (const p of dustParticles) {
+const t = (now - p.start) / p.life;
+const alpha = Math.max(0, 1 - t);
+const size = p.r;
+ctx.save();
+              // 🔥 Glow / depth
         ctx.shadowColor = "rgba(0,0,0,0.35)";
         ctx.shadowBlur = 6 * visualScale;
 
@@ -530,7 +572,7 @@ function drawSky() {
         );
         ctx.fill();
 
-        ctx.restore(); // ✅ resets shadow automatically
+        ctx.restore(); // resets shadow automatically
     }
 }
   /* ------------------ LAYOUT / RESIZE ------------------ */
@@ -559,7 +601,12 @@ const calcScale = Math.min(width, Math.max(560, height)) / 900;
 visualScale = Math.max(0.4, calcScale); // 🔥 FLOOR (CRITICAL)
 lastVisualScale = visualScale;
 
-    groundHeight = Math.min(150, 400 * visualScale);
+    const isLandscape = width > height;
+const cfg = isLandscape ? PHYSICS.landscape : PHYSICS.portrait;
+
+groundHeight = Math.round(
+    height * 0.22 * cfg.groundScale
+);
 
     // ---- POSITION RATIOS (CORRECT) ----
     const rx = width / oldWidth;
@@ -575,9 +622,7 @@ lastVisualScale = visualScale;
         player.w = 46 * visualScale;
         player.h = 56 * visualScale;
 
-        player.gravity = 0.9 * visualScale;
-        player.jumpPower = 17 * visualScale;
-
+        applyPlayerPhysics();
         const gY = getGroundY();
         if (player.y + player.h > gY) {
             player.y = gY - player.h;
@@ -598,22 +643,54 @@ lastVisualScale = visualScale;
 window.__GAME_API__ = window.__GAME_API__ || {};
 window.__GAME_API__.resize = resize;
   /* ------------------ INIT GAME ------------------ */
+function applyPlayerPhysics() {
+    if (!player) return;
 
+    const isLandscape = width > height;
+
+    // ---- NORMAL GAMEPLAY PHYSICS ----
+    let jump, gravity;
+
+    if (!inBossPhase) {
+        const cfg = isLandscape ? PHYSICS.landscape : PHYSICS.portrait;
+        jump = cfg.jump;
+        gravity = cfg.gravity;
+    }
+
+    // ---- BOSS PHASE PHYSICS ----
+    else {
+        const bossCfg = isLandscape
+            ? PHYSICS.boss.landscape
+            : PHYSICS.boss.portrait;
+
+        jump = bossCfg.jump;
+        gravity = bossCfg.gravity;
+    }
+
+    // ---- APPLY WITH SCALE ----
+    player.jumpPower = jump * visualScale;
+    player.gravity   = gravity * visualScale;
+}
   function init(fullReset = true) {
     cancelJumpHint();
     useCanvasSky = true;
 document.body.style.backgroundImage = "";
       resize();
-      player = {
-          x: 90 * visualScale,
-          y: getGroundY() - 56 * visualScale,
-          w: 46 * visualScale,
-          h: 56 * visualScale,
-          vy: 0,
-          gravity: 0.9 * visualScale,
-          jumpPower: 17 * visualScale,
-          grounded: true
-      };
+      const isLandscape = width > height;
+const cfg = isLandscape ? PHYSICS.landscape : PHYSICS.portrait;
+
+player = {
+    x: 90 * visualScale,
+    y: getGroundY() - 56 * visualScale,
+    w: 46 * visualScale,
+    h: 56 * visualScale,
+    vy: 0,
+    gravity: cfg.gravity * visualScale,
+    jumpPower: cfg.jump * visualScale,
+    grounded: true
+};
+applyPlayerPhysics();
+      
       obstacles = [];
       bullets = [];
       explosions = [];
@@ -870,7 +947,7 @@ for (let i = 0; i < dustCount; i++) {
         w,
         h,
         vx: -2,
-        hp: 200,
+        hp: 10,
         maxHp: 200,
         targetX,  // ✅ stored correctly
         hasReachedLeft:false
@@ -952,12 +1029,14 @@ for (let i = 0; i < dustCount; i++) {
         AUDIO_BOSS_WINS();
         endGame("U Can't Ever Defeat Modi Even In Game Also");
     }
-}  function endGame(message) {
+} 
+ function endGame(message) {
     cancelJumpHint(); // 🔥 INSTANT OVERRIDE
 
     running = false;
     gameOver = true;
     inBossPhase = false;
+    applyPlayerPhysics();
     bossIntro = false;
     allowObstacles = false;
     isPreBossFire = false;
@@ -968,6 +1047,7 @@ for (let i = 0; i < dustCount; i++) {
     overlay.style.display = 'block';
     restartBtn.style.display = 'block';
     exitBtn.style.display = 'block';
+    pauseBtn.style.display = 'none';
 }
   /* ------------------ BOSS DEFEAT SEQUENCE ------------------ */
 
@@ -987,7 +1067,7 @@ for (let i = 0; i < dustCount; i++) {
       running = false;
       gameOver = true;
       inBossPhase = false;
-
+applyPlayerPhysics();
       scoreEl.style.display = 'none';
       bossHpBar.style.display = 'none';
       bossHpInner.style.display = 'none';
@@ -1090,7 +1170,7 @@ document.body.style.backgroundImage = 'url("background1.jpg")';
                   inBossPhase = true;
 
                   spawnBoss();
-                  player.gravity = 0.55 * visualScale;
+                  applyPlayerPhysics();
                   overlay.style.display = "none";
                   AUDIO_BOSS_FIGHT();
               } else {
@@ -1230,7 +1310,7 @@ drawGround();
     updateDust(delta);
     return;
 }
-          drawDust();
+      drawDust();
       drawObstacles();
       drawBullets();
       drawPlayer();
@@ -1312,36 +1392,77 @@ function resetOverlayStyle() {
     overlay.style.opacity = "1";
 }
   /* ------------------ INPUT HANDLING ------------------ */
+let audioUnlocked = false;
 
-  function onUserGestureStart() {
-      userGestureDone = true;
-unlockAllAudio();
-      audio9.volume = 0;
-      safePlay(audio9);
-      audio9.pause();
-      audio9.currentTime = 0;
+function unlockAudioOnGesture() {
+    if (audioUnlocked) return;
+    audioUnlocked = true;
 
-      if (!paused && running) {
+    const audios = [audio8, audio9];
+
+    audios.forEach(a => {
+        try {
+            a.volume = 0;
+            a.currentTime = 0;
+
+            const p = a.play();
+            if (p && p.then) {
+                p.then(() => {
+                    a.pause();
+                    a.currentTime = 0;
+                }).catch(() => {});
+            }
+        } catch (e) {}
+    });
+    }
+
+let vibCheckedThisSession = false;
+let audioGestureConsumed = false; // NEVER reset
+
+function onUserGestureStart() {
+audioGestureConsumed = true;
+if(!audioUnlocked){
+    unlockAudioOnGesture();
+ }
+    userGestureDone = true;
+
+    if (!vibCheckedThisSession) {
+        vibCheckedThisSession = true;
+
+              // ---- BROWSER ---- //
+        if (isBrowser && getCachedVibration() === null) {
+    detectAndCacheVibration();
+}
+              // ---- APK ---- //
+        if (
+            isApp &&
+            !localStorage.getItem(APK_HIDE_KEY)
+        ) {
+            showVibrationPopup();
+        }
+    }
+    audio9.volume = 0;
+    safePlay(audio9);
+    audio9.pause();
+    audio9.currentTime = 0;
+    if (!paused && running) {
     safePlay(audio1);
 }
-
 if (!started) {
     started = true;
     running = true;
     overlay.style.display = 'none';
     lastTime = performance.now();
     AUDIO_START_GAMEPLAY();
-
-    // show hint after start
     showJumpHint();
-
     return;
 }
       if (paused) return;
       if (gameOver) return;
 
       jump();
-  } 
+  }
+  
    function onKeyDown(e) {
       if (gameOver && e.code === "Space") init(true);
       if (['Space', 'ArrowUp', 'KeyW'].includes(e.code)) {
@@ -1418,12 +1539,12 @@ if (!started) {
       if (isBrowser) {
           // Web: clear login and go back
           localStorage.removeItem("login");
-          window.location.replace("index.html");
+          location.replace("index.html");
           return;
           }
 
       // APK: no real close from JS → go back to main page
-      window.location.replace("index.html");
+      location.replace("index.html");
   }
 if (isBrowser) {
     history.pushState({ panel: false }, "");
@@ -1533,45 +1654,70 @@ if (isBrowser) {
       });
   }
     // ===== AUTO EXIT AFTER 2 MINUTES HIDDEN =====
-const AUTO_EXIT_DELAY = 2 * 60 * 1000;
-const HIDDEN_KEY = "hiddenAt";
+// ===== AUTO EXIT (DIDI PAGE) =====
+function goToContact() {
+    sessionStorage.setItem(INTERNAL_NAV_KEY, "contact");
+    window.location.href = "contact.html";
+}
 
-document.addEventListener("visibilitychange", () => {
-    if (document.hidden) {
+const AUTO_EXIT_DELAY = 2 * 60 * 1000; // 2 minutes
+const DIDI_HIDDEN_KEY = "__DIDI_HIDDEN_AT__";
+const INTERNAL_NAV_KEY = "INTERNAL_NAV";
 
-        if (!localStorage.getItem(HIDDEN_KEY)) {
-            localStorage.setItem(HIDDEN_KEY, Date.now());
-        }
+function markHidden() {
+    // ❌ Ignore internal navigation
+    if (sessionStorage.getItem(INTERNAL_NAV_KEY) === "contact") return;
+localStorage.removeItem(APK_HIDE_KEY);
+localStorage.removeItem(VIB_CACHE_KEY);
+    if (!localStorage.getItem(DIDI_HIDDEN_KEY)) {
+        localStorage.setItem(DIDI_HIDDEN_KEY, Date.now().toString());
+    }
 
-        stopAllAudio();
+    stopAllAudio?.();
 
-        if (running && !paused) {
-            paused = true;
-            pauseMenu.style.display = "block";
-        }
+    if (running && !paused) {
+        paused = true;
+        pauseMenu.style.display = "block";
+    }
 
-        if (panelOpened) {
-            closeSlidePanel();
-        }
+    if (panelOpened) {
+        closeSlidePanel();
+    }
+}
 
-    } else {
-        const hiddenAt = Number(localStorage.getItem(HIDDEN_KEY));
-        localStorage.removeItem(HIDDEN_KEY);
+function checkAutoExit() {
+    const hiddenAt = Number(localStorage.getItem(DIDI_HIDDEN_KEY));
+    if (!hiddenAt) return;
 
-        if (hiddenAt && Date.now() - hiddenAt >= AUTO_EXIT_DELAY) {
-            stopAllAudio();
+    localStorage.removeItem(DIDI_HIDDEN_KEY);
+    sessionStorage.removeItem(INTERNAL_NAV_KEY); // restart semantics
 
-            if (isBrowser) {
-                localStorage.removeItem("login");
-            }
+    if (Date.now() - hiddenAt >= AUTO_EXIT_DELAY) {
+        stopAllAudio?.();
 
+        if (isBrowser) {
+            localStorage.removeItem("login");
             location.replace("index.html");
-            return;
+        } else {
+            // WebView / APK
+            location.replace("didi.html");
         }
-
+    } else {
         lastTime = performance.now();
     }
+}
+
+// ---- Background detection ----
+document.addEventListener("visibilitychange", () => {
+    if (document.hidden) markHidden();
 });
+window.addEventListener("blur", markHidden);
+window.addEventListener("pagehide", markHidden);
+
+// ---- Resume / reload detection ----
+window.addEventListener("focus", checkAutoExit);
+window.addEventListener("pageshow", checkAutoExit);
+document.addEventListener("DOMContentLoaded", checkAutoExit);
 })(); // end IIFE
     // ================= SLIDE PANEL LOGIC =================
 let panelOpened = false;
