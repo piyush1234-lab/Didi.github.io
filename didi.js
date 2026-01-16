@@ -1,140 +1,156 @@
-// PLATFORM DETECTION //
+// ================== PLATFORM DETECTION ==================
 const UA = navigator.userAgent || "";
-// APK //
 const isApp = UA.startsWith("Dalvik/");
-// Normal Browser //
-const isBrowser = /Mozilla\/5\.0/.test(UA);
-// for browser cache storing //
+const isBrowser = /Mozilla\/5\.0/.test(UA) && !isApp;
+
+// ================== CACHE KEYS ==================
 const VIB_CACHE_KEY = "vibration_support"; 
-// Apk checkbox // 
 const APK_HIDE_KEY  = "apk_vib_dismissed";
+const BROWSER_HIDE_KEY = "browser_session_dismissed";
+
 let userGestureDone = false;
 
-// VIBRATION TEST //
+// ================== VIBRATION TEST (STRICTLY ON GESTURE) ==================
 function detectAndCacheVibration() {
-    try {
-        if (!navigator.vibrate) {
+       try {
+        if (!navigator.vibrate){
             localStorage.setItem(VIB_CACHE_KEY, "false");
             return false;
         }
-
-        const ok = navigator.vibrate(10);
+        const ok = navigator.vibrate(50);
         localStorage.setItem(VIB_CACHE_KEY, ok ? "true" : "false");
         return ok;
-    } catch {
+    } catch (e) {
         localStorage.setItem(VIB_CACHE_KEY, "false");
         return false;
     }
 }
+
 function getCachedVibration() {
     const v = localStorage.getItem(VIB_CACHE_KEY);
     if (v === "true") return true;
     if (v === "false") return false;
-    return null; // not tested yet
+    return null;
 }
 
-// ================== SHOW POPUP AFTER LOADER IF VIBRATION FAILS ==================
+// ================== USER GESTURE HANDLER ==================
+const handleFirstGesture = () => {
+    if (!userGestureDone) {
+        userGestureDone = true;
+        
+
+        const success = detectAndCacheVibration();
+        
+        if (success && isBrowser) {
+            
+            sessionStorage.setItem(BROWSER_HIDE_KEY, "true");
+        }
+    }
+};
+
+// Listen for interactions to perform the hardware check
+window.addEventListener("mousedown", handleFirstGesture, { once: true });
+window.addEventListener("touchstart", handleFirstGesture, { once: true });
+
+// ================== INITIALIZATION ==================
 window.addEventListener("load", () => {
-     // APK //
+    
+
+    // ---------- APK LOGIC ----------
     if (isApp) {
-    if (isApp && !localStorage.getItem(APK_HIDE_KEY)) {
-    showVibrationPopup();
-}
-        // APK popup handled on restart / init
+        
+        if (!localStorage.getItem(APK_HIDE_KEY)) {
+            showVibrationPopup();
+        }
         return;
     }
-    // BROWSER //
-    // BROWSER //
-setTimeout(() => {
-    if (userGestureDone) return;
 
-    const vib = getCachedVibration();
-    if (vib !== true) {
-        showVibrationPopup();
-    }
-}, 10000);
-})
+    // ---------- BROWSER LOGIC ----------
+    
 
-    function showVibrationPopup() {
-    if (isApp) {
-        if (localStorage.getItem(APK_HIDE_KEY)) return;
-    }
+    setTimeout(() => {
+        
+        // 1. If already dismissed for this session, do nothing
+        if (sessionStorage.getItem(BROWSER_HIDE_KEY)) {
+            
+            return;
+        }
 
-    // ---------- BROWSER ----------
-    if (isBrowser) {
+        // 2. Check if we've successfully tested vibration yet
         const vib = getCachedVibration();
-        if (vib == true) return;
-    }
+
+        if (vib === false) {
+            
+            showVibrationPopup();
+        } else if (vib === null && !userGestureDone) {
+       
+        } else if (vib === true) {
+            
+        }
+    }, 10000);
+});
+
+// ================== POPUP ==================
+function showVibrationPopup() {
+    // Safety check: Don't show if keys are already set
+    if (isApp && localStorage.getItem(APK_HIDE_KEY)) return;
+    if (isBrowser && sessionStorage.getItem(BROWSER_HIDE_KEY)) return;
 
     const box = document.getElementById("apkVibrationPopup");
     const txt = document.getElementById("apkVibText");
     const okBtn = document.getElementById("apkVibOK");
     const cancelBtn = document.getElementById("apkVibCancel");
-    
-const neverBox = document.getElementById("apkNeverWrap");
-const neverChk = document.getElementById("apkNeverAgain");
+    const neverBox = document.getElementById("apkNeverWrap");
+    const neverChk = document.getElementById("apkNeverAgain");
 
-if (isApp && neverBox) {
-    neverBox.style.display = "block";
-    if (neverChk) neverChk.checked = false;
-} else if (neverBox) {
-    neverBox.style.display = "none";
-}
-    if (!box || !txt || !okBtn || !cancelBtn) return;
+    if (!box || !txt || !okBtn || !cancelBtn) {
+        
+        return;
+    }
 
     if (isApp) {
-        txt.innerHTML = `Vibration is not working in this APK.<br>For best gameplay, u can use browser, do you want to continue to browser?`;
+        txt.innerHTML = "Vibration is not working in this APK. For Best Gameplay You Can Use Browser.<br> Press Ok To Continue to Browser";
         cancelBtn.style.display = "inline-flex";
-    } if(isBrowser) {
-        txt.innerHTML = `
-            Your browser does not support vibration.<br>
-            Click OK to continue without vibration.
-        `;
+        if (neverBox) neverBox.style.display = "block";
+    } else {
+        txt.innerHTML = "Your browser does not support vibration.<br>Click OK to continue without vibration.";
         cancelBtn.style.display = "none";
+        if (neverBox) neverBox.style.display = "none";
     }
 
     box.style.display = "flex";
+    
 
     okBtn.onclick = () => {
-    const neverChk = document.getElementById("apkNeverAgain");
-
-    if (isApp && neverChk && neverChk.checked) {
-        localStorage.setItem(APK_HIDE_KEY, "true");
-    }
-
-    box.style.display = "none";
-
-    setTimeout(() => {
-        window.__GAME_API__?.resize();
-    }, 50);
-
-    if (isApp) {
-        const url = "https://piyush1234-lab.github.io/Didi.github.io/didi.html?apk=1";
-
-        try {
-            if (window.Android && Android.openUrl) {
-                Android.openUrl(url);
-                return;
+        
+        if (isApp) {
+            if (neverChk && neverChk.checked) {
+                localStorage.setItem(APK_HIDE_KEY, "true");
             }
-        } catch {}
+            box.style.display = "none";
+            const url = "https://piyush1234-lab.github.io/Didi.github.io/didi.html?apk=1";
+            try {
+                if (window.Android && Android.openUrl) {
+                    Android.openUrl(url);
+                    return;
+                }
+            } catch (e) {}
+            window.open(url, "_system") || (location.href = url);
+        } else {
+            sessionStorage.setItem(BROWSER_HIDE_KEY, "true");
+            box.style.display = "none";
+        }
+        setTimeout(() => window.__GAME_API__?.resize(), 50);
+    };
 
-        try {
-            window.open(url, "_system");
-            return;
-        } catch {}
-
-        location.href = url;
-    }
-};
     cancelBtn.onclick = () => {
-    box.style.display = "none";
-
-    // 🔥 FIX #3: re-sync canvas after popup
-    setTimeout(() => {
-    window.__GAME_API__?.resize();
-}, 50);
+        
+        box.style.display = "none";
+        setTimeout(() => window.__GAME_API__?.resize(), 50);
+    };
 }
-};
+
+
 document.addEventListener("DOMContentLoaded", () => {
     // -------- Loader logic --------
     let fakePercent = 0;
@@ -332,6 +348,7 @@ function togglePause(show) {
     if (show) {
         pauseAllAudio();
         running = false;
+        overlay.style.display= "none";
         cancelJumpHint(false);
         return;
     }
@@ -420,13 +437,13 @@ function trackImage(img) {
 }
   /* ------------------ IMAGES ------------------ */
 
-  const groundImg = new Image(); groundImg.src = "ground.jpg";
+  const groundImg = new Image(); groundImg.src = "ground.webp";
   const bgImg = new Image();
-bgImg.src = "background.jpg";
-  const playerImg = new Image(); playerImg.src = "character.png";
-  const obstacleImg = new Image(); obstacleImg.src = "obstacle.png";
-  const bossImg = new Image(); bossImg.src = "boss_monster.jpeg";
-  const bulletImg = new Image(); bulletImg.src = "bullet.png";
+bgImg.src = "background.webp";
+  const playerImg = new Image(); playerImg.src = "character.webp";
+  const obstacleImg = new Image(); obstacleImg.src = "obstacle.webp";
+  const bossImg = new Image(); bossImg.src = "boss_monster.webp";
+  const bulletImg = new Image(); bulletImg.src = "bullet.webp";
 
 
   /* ------------------ GAME STATE ------------------ */
@@ -947,7 +964,7 @@ for (let i = 0; i < dustCount; i++) {
         w,
         h,
         vx: -2,
-        hp: 10,
+        hp: 200,
         maxHp: 200,
         targetX,  // ✅ stored correctly
         hasReachedLeft:false
@@ -1116,7 +1133,7 @@ drawGround();
 drawPlayer();
 
 // 🔥 LOCK FINAL SKY ON DOM
-document.body.style.backgroundImage = 'url("background1.jpg")';
+document.body.style.backgroundImage = 'url("background1.webp")';
           setTimeout(() => {
               blastOverlay.style.opacity = '0';
               overlay.style.display = "none";
@@ -1426,13 +1443,24 @@ if(!audioUnlocked){
  }
     userGestureDone = true;
 
+    // EXACTLY HERE
     if (!vibCheckedThisSession) {
-        vibCheckedThisSession = true;
+vibCheckedThisSession = true;
 
-              // ---- BROWSER ---- //
-        if (isBrowser && getCachedVibration() === null) {
-    detectAndCacheVibration();
+// 1. Perform the test
+
+const isSupported = detectAndCacheVibration();
+
+// 2. If it returns FALSE, show popup INSTANTLY
+
+if (!isSupported) {
+ showVibrationPopup();
+togglePause(true);
+} else {
+
+sessionStorage.setItem(BROWSER_HIDE_KEY,"true");
 }
+
               // ---- APK ---- //
         if (
             isApp &&
