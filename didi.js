@@ -59,7 +59,7 @@ window.addEventListener("load", () => {
     // ---------- APK LOGIC ----------
     if (isApp) {
         
-        if (!localStorage.getItem(APK_HIDE_KEY)) {
+        if (!sessionStorage.getItem(APK_HIDE_KEY)) {
             showVibrationPopup();
         }
         return;
@@ -93,7 +93,7 @@ window.addEventListener("load", () => {
 // ================== POPUP ==================
 function showVibrationPopup() {
     // Safety check: Don't show if keys are already set
-    if (isApp && localStorage.getItem(APK_HIDE_KEY)) return;
+    if (isApp && sessionStorage.getItem(APK_HIDE_KEY)) return;
     if (isBrowser && sessionStorage.getItem(BROWSER_HIDE_KEY)) return;
 
     const box = document.getElementById("apkVibrationPopup");
@@ -125,7 +125,7 @@ function showVibrationPopup() {
         
         if (isApp) {
             if (neverChk && neverChk.checked) {
-                localStorage.setItem(APK_HIDE_KEY, "true");
+                sessionStorage.setItem(APK_HIDE_KEY, "true");
             }
             box.style.display = "none";
             const url = "https://piyush1234-lab.github.io/Didi.github.io/didi.html?apk=1";
