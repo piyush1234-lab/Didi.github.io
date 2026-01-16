@@ -1467,7 +1467,7 @@ sessionStorage.setItem(BROWSER_HIDE_KEY,"true");
               // ---- APK ---- //
         if (
             isApp &&
-            !localStorage.getItem(APK_HIDE_KEY)
+            !sessionStorage.getItem(APK_HIDE_KEY)
         ) {
             showVibrationPopup();
         }
