@@ -144,7 +144,10 @@ function showVibrationPopup() {
     };
 
     cancelBtn.onclick = () => {
-        
+            if (isApp) {
+            if (neverChk && neverChk.checked) {
+sessionStorage.setItem(APK_HIDE_KEY, "true");
+            }
         box.style.display = "none";
         setTimeout(() => window.__GAME_API__?.resize(), 50);
     };
