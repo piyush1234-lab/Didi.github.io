@@ -146,7 +146,7 @@ function showVibrationPopup() {
     cancelBtn.onclick = () => {
             if (isApp) {
             if (neverChk && neverChk.checked) {
-sessionStorage.setItem(APK_HIDE_KEY, "true");
+                sessionStorage.setItem(APK_HIDE_KEY, "true");
             }
         box.style.display = "none";
         setTimeout(() => window.__GAME_API__?.resize(), 50);
@@ -1467,7 +1467,7 @@ sessionStorage.setItem(BROWSER_HIDE_KEY,"true");
               // ---- APK ---- //
         if (
             isApp &&
-            !sessionStorage.getItem(APK_HIDE_KEY)
+           !sessiomStorage.getItem(APK_HIDE_KEY)
         ) {
             showVibrationPopup();
         }
@@ -1543,7 +1543,7 @@ if (!started) {
   restartGameBtn.addEventListener('click', () => {
       stopAllAudio();
       init(true);
-      showVibrationPopup();    
+      
   });
 
   exitGameBtn.addEventListener('click', () => {
@@ -1554,7 +1554,7 @@ if (!started) {
   restartBtn.addEventListener('click', () => {
       AUDIO_RESTART();
       init(true);
-      showVibrationPopup();      
+        
   });
 
   exitBtn.addEventListener('click', () => {
@@ -1609,8 +1609,8 @@ if (isBrowser) {
     resize(); // ALWAYS resize first
 
     if (started && !gameOver) {
-        paused = true;                 // 🔒 HARD PAUSE
-        running = false;               // ❗ STOP GAME LOGIC
+        paused = true;                 
+        running = false;               
         pauseMenu.style.display = "block";
         overlay.style.display = "none";
 
