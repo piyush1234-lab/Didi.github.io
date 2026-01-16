@@ -148,6 +148,7 @@ function showVibrationPopup() {
             if (neverChk && neverChk.checked) {
                 sessionStorage.setItem(APK_HIDE_KEY, "true");
             }
+            }
         box.style.display = "none";
         setTimeout(() => window.__GAME_API__?.resize(), 50);
     };
@@ -1467,7 +1468,7 @@ sessionStorage.setItem(BROWSER_HIDE_KEY,"true");
               // ---- APK ---- //
         if (
             isApp &&
-           !sessiomStorage.getItem(APK_HIDE_KEY)
+           !sessionStorage.getItem(APK_HIDE_KEY)
         ) {
             showVibrationPopup();
         }
@@ -1543,7 +1544,7 @@ if (!started) {
   restartGameBtn.addEventListener('click', () => {
       stopAllAudio();
       init(true);
-      
+      showVibrationPopup();
   });
 
   exitGameBtn.addEventListener('click', () => {
@@ -1554,7 +1555,7 @@ if (!started) {
   restartBtn.addEventListener('click', () => {
       AUDIO_RESTART();
       init(true);
-        
+      showVibrationPopup();
   });
 
   exitBtn.addEventListener('click', () => {
@@ -1698,8 +1699,8 @@ const INTERNAL_NAV_KEY = "INTERNAL_NAV";
 function markHidden() {
     // ❌ Ignore internal navigation
     if (sessionStorage.getItem(INTERNAL_NAV_KEY) === "contact") return;
-localStorage.removeItem(APK_HIDE_KEY);
-localStorage.removeItem(VIB_CACHE_KEY);
+sessionStorage.removeItem(APK_HIDE_KEY);
+sessionStorage.removeItem(VIB_CACHE_KEY);
     if (!localStorage.getItem(DIDI_HIDDEN_KEY)) {
         localStorage.setItem(DIDI_HIDDEN_KEY, Date.now().toString());
     }
