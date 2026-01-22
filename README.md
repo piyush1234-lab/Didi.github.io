@@ -126,7 +126,7 @@ Players are requested to treat this game as a form of entertainment and creative
 ## ⚠️ Requirements
 
 - As this is a Entertainment version only the file is strictly password secured to access the file password must be entered.
-- An password disabled APK is also is available for this app visit the link below to download the apk file.
+- An password disabled APK is also available for this app visit the link below to download the apk file.
 
 ---
 
