@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Jungle Runner — Finalized (Fixed Boss Flow)</title>
+<link rel="stylesheet" href="didi.css">
+</head>
+<body>
+<div id="apkVibrationPopup">
+    <div id ="vibrationMsg">
+ <!-- THIS TEXT WILL BE SET BY JS -->
+        <p id="apkVibText">
+        </p>
+        <label id="apkNeverWrap" style="display:none; margin-bottom:12px; font-weight:600;">
+  <input type="checkbox" id="apkNeverAgain">
+  Don't show again
+</label>
+          <div id="vibrationButton">
+            <button id="apkVibOK">OK</button>
+
+            <button id="apkVibCancel">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<div id="loader">
+  <img src="character.webp" alt="Loading...">
+  <div class="progress"><div class="fill" id="loadFill"></div></div>
+  <p id="loadPercent">0%</p>
+ <div id="loaderDisclaimer" class="loader-disclaimer"><span style="color:red; font-size: clamp(12px, 2.8vw, 16px);">⚠ DISCLAIMER</span><br>
+This Game Is A Political Meme Game Made For Entertainment Pupose Only. No Real Characters Are Used. Some Copyrighted Music Track Are used On Purpose, This Project Does Not Intend To Hurts Anyone Feelings. If It's Does So, Sorry For That. All The Players Are Requested To Take This Game As An Entertainment Purpose Only.</div> 
+</div>
+
+<header id="topHeader">
+  <img src="https://upload.wikimedia.org/wikipedia/commons/a/a5/Instagram_icon.png"
+       alt="Instagram" width="28" height="28" style="border-radius:6px;">
+  <span id="instaName" style="color:white;font-weight:700;font-size:16px;">
+    Created by editz__
+  </span>
+</header>
+
+<div id="score">Score: 0</div>
+<button id="pauseBtn" aria-label="Pause">⏸️</button>
+
+<div id="overlayMsg">Tap / Click / Press Space to start</div>
+<button id="restartBtn">Restart</button>
+<button id="exitBtn">Exit</button>
+
+<div id="pauseMenu">
+  <div style="font-weight:800;margin-bottom:6px">Paused</div>
+  <button id="resumeGame">Resume</button>
+  <button id="restartGame">Restart</button>
+  <button id="exitGame" class="exit">Exit</button>
+</div>
+
+<div id="bossHp"><div id="bossHpInner"></div></div>
+<div id="blastOverlay"></div>
+
+<button id="fsBtn">⛶</button>
+<div id="slidePanel">
+    <div id="slideTab">
+        <div id="slideIcon">!</div>
+    </div>
+
+    <div id="slideContent">
+        <!-- whatever you want inside the opened panel -->
+        <p id="suggestion">Suggestion</p>
+    </div>
+</div>
+<canvas id="gameCanvas"></canvas>
+<script src="didi.js"></script>
+</body>
+</html>

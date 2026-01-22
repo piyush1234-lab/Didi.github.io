@@ -1,0 +1,121 @@
+/* ----------- Global Styles ----------- */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: Arial, sans-serif;
+}
+
+body {
+    background: #80d6ff;
+    color: #FFBFFFEA;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* ----------- Main Container ----------- */
+.contain {
+height: auto;
+    width: 90%;
+    max-width: 400px;
+    padding: 25px;
+    background: rgba(1, 1, 1, 0.8);
+    border-radius: 15px;
+    box-shadow: 0 0 25px rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(10px);
+}
+
+/* ----------- Login Box ----------- */
+#loginform h1 {
+    font-size: 20px;
+    text-align: center;
+    margin-bottom: 40px;
+    font-weight: 600;
+}
+
+#loginform p {
+    margin: 10px 0 10px;
+    font-size: 18px;
+    text-align: center;
+
+}
+
+/* ----------- Inputs ----------- */
+#in2,
+#pwd {
+    width: 100%;
+    padding: 8px;
+    border-radius: 8px;
+    border: none;
+    margin-bottom: 10px;
+    font-size: 16px;
+    outline: none;
+}
+
+/* ----------- Password Box ----------- */
+.pwd-box {
+    position: relative;
+    width: 100%;
+    text-align: center;
+}
+
+.show-label {
+    font-size: 14px;
+    align-items: center;
+    display: block;
+    margin: 15px auto;
+    display: inline-block;
+}
+
+/* ----------- Proceed Button ----------- */
+#btn1 {
+    width: 50%;
+    padding: 12px;
+    background: white;
+    color: black;
+    border: none;
+    border-radius: 10px;
+    font-size: 17px;
+    margin-top: 15px;
+    font-weight: 600;
+    outline: none;
+    transition: 0.3s;
+    display: block;
+    margin:auto;
+}
+
+#btn1:active {
+    transform: scale(0.97);
+}
+
+/* Touch highlight effect JS triggers */
+#btn1 {
+    transition: box-shadow 0.2s ease;
+}
+
+/* TABLET 768px–1199px */
+@media (max-width: 768px) {
+    .contain {
+        max-width: 450px;
+        padding: 30px;
+    }
+    #loginform h1 {
+        font-size: 26px;
+    }
+}
+
+/* DESKTOP 1200px+ */
+@media (min-width: 1200px) {
+
+    .contain {
+        max-width: 500px;
+        padding: 35px;
+        border-radius: 20px;
+    }
+
+    #loginform h1 {
+        font-size: 28px;
+    }
+}

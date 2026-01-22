@@ -1,0 +1,1944 @@
+ /* -- For Apk I Uses WebIntoApp Platform -- */
+      
+       // === PLATFORM DETECTION === //
+const UA = navigator.userAgent || "";
+// === For APK Webview === //
+const isApp = UA.startsWith("Dalvik/");
+// === For Browswer === //
+const isBrowser = /Mozilla\/5\.0/.test(UA) && !isApp;
+
+// For Storing Cache Key //
+const VIB_CACHE_KEY = "vibration_support"; 
+const APK_HIDE_KEY  = "apk_vib_dismissed";
+const BROWSER_HIDE_KEY = "browser_session_dismissed";
+
+  // 2 seconds Timer For Auto Closing Panel //
+const PANEL_IDLE_TIME = 2000;
+const redirectURL = "contact.html";
+
+let panelOpened = false;    
+let panelAutoCloseTimer = null;
+
+let userGestureDone = false;
+  
+// --- Panel close auto Timer function --- //
+function startPanelAutoCloseTimer() {
+clearTimeout(panelAutoCloseTimer);
+    panelAutoCloseTimer = setTimeout(() => {
+if (panelOpened) {
+         closeSlidePanel();
+        }
+    }, PANEL_IDLE_TIME);
+    }
+function resetPanelAutoCloseTimer() {
+    if (!panelOpened) return;
+    startPanelAutoCloseTimer();
+    }
+
+// ---- OPEN / CLOSE PANEL function --- //
+function closeSlidePanel() {
+    const slidePanel = document.getElementById("slidePanel");
+    if (slidePanel) slidePanel.classList.remove("open");
+    panelOpened = false;
+    clearTimeout(panelAutoCloseTimer);
+}
+
+  /* ---- VIBRATION FUNCTION WITH LOGIC ---- */
+
+function detectAndCacheVibration() {
+       try {
+        if (!navigator.vibrate){
+            localStorage.setItem(VIB_CACHE_KEY, "false");
+            return false;
+        }
+        const ok = navigator.vibrate(50);
+        localStorage.setItem(VIB_CACHE_KEY, ok ? "true" : "false");
+        return ok;
+    } catch (e) {
+        localStorage.setItem(VIB_CACHE_KEY, "false");
+        return false;
+    }
+}
+
+function getCachedVibration() {
+    const v = localStorage.getItem(VIB_CACHE_KEY);
+    if (v === "true") return true;
+    if (v === "false") return false;
+    return null;
+    }
+
+// === USER GESTURE HANDLER === //
+const handleFirstGesture = () => {
+    if (!userGestureDone) {
+        userGestureDone = true;
+        const success = detectAndCacheVibration();
+        if (success && isBrowser) {
+        sessionStorage.setItem(BROWSER_HIDE_KEY, "true");
+        }
+    }
+};
+
+// Event listeners to check handle gesture //
+window.addEventListener("mousedown", handleFirstGesture, { once: true });
+window.addEventListener("touchstart", handleFirstGesture, { once: true });
+
+// --- Performing vibration logic on load --- //
+window.addEventListener("load", () => {
+              // - APK LOGIC - //
+       if (isApp) {
+       if (!sessionStorage.getItem(APK_HIDE_KEY)) {
+            showVibrationPopup();
+            }
+        return;
+    }
+           // - BROWSER LOGIC - //
+    setTimeout(() => {
+// == 1. If already dismissed for this session, do nothing == //
+        if (sessionStorage.getItem(BROWSER_HIDE_KEY)) {
+        return;
+        }
+// 2. Check if we've successfully tested vibration yet
+const vib = getCachedVibration();
+        if (vib === false)
+        {
+        showVibrationPopup();
+        }else if (vib === null && !userGestureDone) {
+       
+        } else if (vib === true) {
+            
+        }
+    }, 5000);
+});
+              // === POPUP === //
+function showVibrationPopup() {
+    const box = document.getElementById("apkVibrationPopup");
+    const txt = document.getElementById("apkVibText");
+    const okBtn = document.getElementById("apkVibOK");
+    const cancelBtn = document.getElementById("apkVibCancel");
+    const neverBox = document.getElementById("apkNeverWrap");
+    const neverChk = document.getElementById("apkNeverAgain");
+
+    // Don't show if keys are already set //
+    if (isApp && sessionStorage.getItem(APK_HIDE_KEY)) return;
+    if (isBrowser && sessionStorage.getItem(BROWSER_HIDE_KEY)) return;
+    if (!box || !txt || !okBtn || !cancelBtn) {
+    return;
+    }
+    if (isApp) {
+        txt.innerHTML = "Vibration Will Not Work On This APK. As This APK Lacks Of Vibration API. For Best Gameplay You Can Use Browser.<br> Press Ok To Continue to Browser";
+        cancelBtn.style.display = "inline-flex";
+        if (neverBox) neverBox.style.display = "block";
+    } else {
+        txt.innerHTML = "Your Browser May Or Not Support Vibration, or The Vibration Test Seems To Fail.<br>Click OK To Continue Without Vibration.";
+      // == No Cancel button for Web == //
+        cancelBtn.style.display = "none";
+        if (neverBox) neverBox.style.display = "none";
+    }
+    box.style.display = "flex"; 
+  // == Ok button design for App and web == //
+    okBtn.onclick = () => {
+    if (isApp) {
+            if (neverChk && neverChk.checked) {
+            sessionStorage.setItem(APK_HIDE_KEY, "true");
+            }
+            box.style.display = "none";
+            const url = "https://piyush1234-lab.github.io/Didi.github.io/didi.html?apk=1";
+            try {
+                if (window.Android && Android.openUrl) {
+                    Android.openUrl(url);
+                    return;
+                }
+            } catch (e) {}
+            window.open(url, "_system") || (location.href = url);
+        } else {
+        sessionStorage.setItem(BROWSER_HIDE_KEY, "true");
+            box.style.display = "none";
+        }
+        setTimeout(() => window.__GAME_API__?.resize(), 50);
+    };
+    // == Cancel button design for app == //
+    cancelBtn.onclick = () => {
+    if (isApp) {
+    if (neverChk && neverChk.checked) {
+    sessionStorage.setItem(APK_HIDE_KEY, "true");
+    }
+    }
+    box.style.display = "none";
+    setTimeout(() => window.__GAME_API__?.resize(), 50);
+    };
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+    // -------- Loader fake progress --------
+    let fakePercent = 0;
+    const fill = document.getElementById("loadFill");
+    const percentTxt = document.getElementById("loadPercent");
+
+    const LOADER_MIN_TIME = 2500;
+    const loaderShownAt = performance.now();
+
+    const fake = setInterval(() => {
+        fakePercent += Math.random() * 7;
+        if (fakePercent > 90) fakePercent = 90;
+
+        if (fill) fill.style.width = fakePercent + "%";
+        if (percentTxt) percentTxt.textContent = Math.round(fakePercent) + "%";
+    }, 200);
+
+        // --- SLIDE PANEL SETUP --- //
+    const slidePanel = document.getElementById("slidePanel");
+    const slideTab = document.getElementById("slideTab");
+    const slideContent = document.getElementById("slideContent");
+    
+    if (!slidePanel || !slideTab) return;
+    slideTab.addEventListener("click", (e) => {
+        e.stopPropagation();
+    if (panelOpened) {
+    closeSlidePanel();
+    } else {
+    slidePanel.classList.add("open");
+    panelOpened = true;
+    startPanelAutoCloseTimer();
+    }
+    });
+// === 1. Outside Click: Closes panel if clicking anywhere else === //
+document.addEventListener("click", (e) => {
+if (panelOpened && !slidePanel.contains(e.target)) {
+        closeSlidePanel();
+        }
+        });
+// === 2. Panel Interaction: Prevent closing when clicking inside === //
+slidePanel.addEventListener("click", (e) => {
+    e.stopPropagation(); // Stops the 'document' click from firing
+    resetPanelAutoCloseTimer();
+});
+// === 3. Content Navigation: Handle the redirect === //
+if (slideContent) {
+    slideContent.addEventListener("click", (e) => {
+    e.stopPropagation();
+        resetPanelAutoCloseTimer();
+        if (panelOpened) {
+            closeSlidePanel();
+            window.location.href = redirectURL;
+    }
+  });
+}
+   // --- Loader fade-out stays on load --- //
+    window.addEventListener("load", () => {
+        clearInterval(fake);
+        if (fill) fill.style.width = "100%";
+        if (percentTxt) percentTxt.textContent = "100%";
+        const elapsed = performance.now() - loaderShownAt;
+        const remaining = Math.max(0, LOADER_MIN_TIME - elapsed);
+        setTimeout(() => {
+            const loader = document.getElementById("loader");
+            if (loader) {
+                loader.style.opacity = "0";
+                setTimeout(() => {
+                    loader.style.display = "none";
+                }, 700);
+            }
+        }, remaining);
+    });
+});
+// --- APK and web UI control (fsBtn + topHeader) --- //
+    const topHeader = document.getElementById("topHeader");
+    // full screen button for web //
+    const fsBtn = document.getElementById("fsBtn");
+
+    if (isApp) {
+        if (topHeader) topHeader.style.display = "flex";
+        if (fsBtn) fsBtn.style.display = "none";         
+    } else {
+        // In normal browser
+        if (topHeader) topHeader.style.display = "none";
+        if (fsBtn) fsBtn.style.display = "flex";
+    }
+    
+  /* ---------- Game Code (IIFE) ---------- */
+
+(() => {
+const params = new URLSearchParams(window.location.search);
+
+  if (params.get("apk") === "1") {
+      localStorage.setItem("login", "true");
+      history.replaceState({}, "", window.location.pathname);
+  }
+
+// --- LOGIN CHECK: only for WEB --- //
+  if (!isApp) {
+      const loginStatus = localStorage.getItem("login");
+      if (loginStatus !== "true") {
+          location.replace("index.html");
+      }
+      }
+
+ // == Buttons ans contents declarations == //
+  
+  const canvas = document.getElementById('gameCanvas');
+  const ctx = canvas.getContext('2d');
+  const scoreEl = document.getElementById('score');
+  const overlay = document.getElementById('overlayMsg');
+  const restartBtn = document.getElementById('restartBtn');
+  const exitBtn = document.getElementById('exitBtn');
+  const pauseBtn = document.getElementById('pauseBtn');
+  const pauseMenu = document.getElementById('pauseMenu');
+  const resumeBtn = document.getElementById('resumeGame');
+  const restartGameBtn = document.getElementById('restartGame');
+  const exitGameBtn = document.getElementById('exitGame');
+  const bossHpBar = document.getElementById('bossHp');
+  const bossHpInner = document.getElementById('bossHpInner');
+  const blastOverlay = document.getElementById('blastOverlay');
+  const fsBtn = document.getElementById("fsBtn");
+  const topHeader = document.getElementById("topHeader");
+  
+ // ====== Image Resource declaration ====== // 
+ 
+// Ground Image //
+const groundImg = new Image();
+groundImg.src = "ground.webp";
+// Background Image //
+const bgImg = new Image();
+bgImg.src = "background.webp";
+// Character Image //
+const playerImg = new Image();
+playerImg.src = "character.webp";
+// Obstacle Image //
+const obstacleImg = new Image();
+obstacleImg.src = "obstacle.webp";
+// Boss Image //
+const bossImg = new Image();
+bossImg.src = "boss_monster.webp";
+// Applied Image for Bullet also //
+  const bulletImg = new Image(); bulletImg.src = "bullet.webp"; 
+  
+     // ====== Audio Declarations ====== //
+     
+// Background Running Audio //
+const audio1 = new Audio("audio1.mp3");
+audio1.loop = true;
+audio1.volume = 0.06;
+// Jump Sound //
+const audio2 = new Audio("audio2.wav");
+audio2.volume= 0.09;
+// Obstacle Hitting Sound //
+const audio3 = new Audio("audio3.wav");
+// Boss Warning Sound //
+const audio4 = new Audio("audio4.mp3");
+audio4.loop = false;
+audio4.volume = 1;
+// Boss Fight Theme //
+const audio5 = new Audio("audio5.mp3");
+audio5.loop = true;
+audio5.volume=0.8;
+// Boss Winning Sound //
+const audio6 = new Audio("audio6.mp3");
+// Character Winnng Sound //
+const audio7 = new Audio("audio7.mp3");
+// Blast Sound //
+const audio8 = new Audio("audio8.mp3");
+audio8.loop = false;
+// After Blast Sound //
+const audio9 = new Audio("audio9.mp3");
+audio9.loop = false;
+
+    // === ORIENTATION + BOSS PHYSICS === //
+
+const PHYSICS = {
+portrait: {
+        groundScale: 1.0,
+        jump: 18,
+        gravity: 0.9
+        },
+landscape: {
+        groundScale: 1.0,
+        jump: 14,
+        gravity: 0.50
+        },
+boss: {
+   portrait: {
+        jump: 20,
+        gravity: 0.70
+        },
+   landscape: {
+        jump: 16,
+        gravity: 0.40
+        }
+      }
+};
+
+// === MAX WIDTH CAPS (base, unscaled) ===
+const MAX_OBSTACLE_WIDTH = 100;
+const MAX_BOSS_WIDTH = 90;
+
+     // === Declaring Game Variables === //
+
+  let width = innerWidth,
+      height = innerHeight,
+      deviceRatio = Math.max(1, window.devicePixelRatio || 1);
+  let visualScale = 1;
+  let lastVisualScale = visualScale;
+  let groundHeight = 90;
+  let freezeCanvasAfterBlast = false;
+  let freezeGround = false;
+let groundSlowFactor = 1; // 1 → moving, 0 → stopped
+  let skyOffset=0;
+  let useCanvasSky=true;
+  let groundOffset=0;
+  let running = false, paused = false, started = false;
+  let score = 0;
+  let lastTime = performance.now(), rafId = null;
+  let player = null;
+  let obstacles = [], bullets = [], explosions = [], dustParticles = [];
+  let spawnTimer = 0, spawnInterval = 1300, gameSpeed = 4;
+  let fireTimer = 0;
+  const FIRE_INTERVAL = 500;
+  let isPreBossFire = false;
+  let BOSS_SCORE_THRESHOLD = 250;
+  let boss = null,bossIntro = false,inBossPhase = false,allowObstacles = true;
+  let gameOver = false;
+  let audioUnlocked = false;
+  let vibCheckedThisSession = false;
+  // ----- Jump hint control -----
+let hintRemaining = 5000; // total duration
+let hintStartTime = 0;
+let hintTimeout = null;
+let hintFadeTimeout = null;
+let hintActive = false;
+
+           // === Image loading === //
+function trackImage(img) {
+  return new Promise(resolve => {
+    if (img.complete && img.naturalWidth > 0) return resolve();
+
+    img.onload = resolve;
+    img.onerror = () => {
+      img.src = img.src.split("?")[0] + "?t=" + Date.now();
+      setTimeout(resolve, 500);
+    };
+  });
+}
+
+// for Checking Vibration //
+function safeVibrate(pattern) {
+if (!navigator.vibrate) return;
+      const p = Array.isArray(pattern) ? pattern : [pattern];
+      navigator.vibrate(p);
+      }
+  
+ // = Audio Function To Safely play Audios = //
+
+// Play audio without any error //
+function safePlay(a) {
+      const p = a.play();
+      if (p && p.catch) p.catch(() => {});
+      }
+      
+// For Safely Stopping All Running Audio At Once //
+function stopAllAudio() {
+    [
+    audio1, audio2, audio3,
+    audio4, audio5, audio6,
+    audio7, audio8, audio9
+    ].forEach(a => {
+        try {
+            a.pause();
+            a.currentTime = 0;
+        } catch (e) {}
+    });
+}
+// For Smoothly Stopping or Lowering the Audio Volume //
+function smoothVolume(audio, target, speed = 0.03) {
+      clearInterval(audio._fade);
+      audio._fade = setInterval(() => {
+          if (Math.abs(audio.volume - target) < 0.03) {
+              audio.volume = target;
+              clearInterval(audio._fade);
+          } else if (audio.volume < target) {
+              audio.volume += speed;
+          } else {
+              audio.volume -= speed;
+          }
+          audio.volume = Math.min(1, Math.max(0, audio.volume));
+      }, 60);
+  }
+// For Safely Rapidout Any Audio //
+function rapidFadeOut(audio) {
+      clearInterval(audio._fade);
+      audio._fade = setInterval(() => {
+          audio.volume = Math.max(0, audio.volume - 0.15);
+          if (audio.volume <= 0) {
+              audio.volume = 0;
+              audio.pause();
+              clearInterval(audio._fade);
+          }
+      }, 50);
+  }
+  // For Pausing All Audio At Once //
+function pauseAllAudio() {
+    [audio1, audio2, audio3, audio4, audio5, audio6, audio7, audio8, audio9]
+        .forEach(a => {
+            try { a.pause(); } catch (e) {}
+        });
+}
+// For Resuming The Paused Audio //
+function resumeGameAudio() {
+// Boss phase music
+if (inBossPhase && boss && !gameOver) {
+        try {
+            audio5.currentTime = audio5.currentTime || 0;
+            safePlay(audio5);
+        } catch (e) {}
+        return;
+    }
+// Normal gameplay music
+    if (running && !gameOver) {
+        try {
+            safePlay(audio1);
+        } catch (e) {}
+    }
+}
+function AUDIO_START_GAMEPLAY() {
+    audio1.currentTime = 0;
+    audio1.volume = 0.05;
+    safePlay(audio1);
+}
+
+  function AUDIO_BOSS_WARNING() {
+      smoothVolume(audio1, 0.12);
+      audio4.currentTime = 0;
+      safePlay(audio4);
+  }
+
+  function AUDIO_BOSS_FIGHT() {
+      smoothVolume(audio1, 0.07);
+      audio5.currentTime = 0;
+      safePlay(audio5);
+  }
+
+  function AUDIO_BOSS_WINS() {
+      try { audio4.pause(); audio4.currentTime = 0; } catch (e) {}
+      try { audio5.pause(); audio5.currentTime = 0; } catch (e) {}
+      rapidFadeOut(audio1);
+      audio6.currentTime = 0;
+      safePlay(audio6);
+  }
+
+  function AUDIO_CHARACTER_WINS() {
+      try { audio4.pause(); audio4.currentTime = 0; } catch (e) {}
+      try { audio5.pause(); audio5.currentTime = 0; } catch (e) {}
+      rapidFadeOut(audio1);
+      audio7.currentTime = 0;
+      safePlay(audio7);
+  }
+
+  function AUDIO_BLAST_START() {
+    audio8.currentTime = 0;
+    audio8.volume = 1;
+
+    setTimeout(() => {
+        safePlay(audio8);
+    }, 10); // 🔥 gives priority over vibration
+}
+  function AUDIO_AFTER_BLAST_MESSAGE() {
+   
+      audio8.pause();
+      audio8.currentTime = 0;
+      audio9.currentTime = 0;
+      audio9.volume = 0.6;
+      safePlay(audio9);
+  }
+
+  function AUDIO_RESTART() {
+      stopAllAudio();
+      audio1.currentTime = 0;
+      audio1.volume = 0.05;
+  }
+  
+// Utilities //  
+function getGroundY() {
+      return height - groundHeight;
+  }
+
+function collides(a, b) {
+      return !(
+          a.x + a.w < b.x ||
+          a.x > b.x + b.w ||
+          a.y + a.h < b.y ||
+          a.y > b.y + b.h
+      );
+}
+
+function sizeFromImage(img, baseHeight) {
+    if (img.complete && img.naturalHeight > 0) {
+        const ratio = img.naturalWidth / img.naturalHeight;
+        return {
+            h: baseHeight * visualScale,
+            w: baseHeight * visualScale * ratio
+        };
+    }
+    return {
+        h: baseHeight * visualScale,
+        w: baseHeight * visualScale
+    };
+}
+
+        // === All Draw Functions === //      
+        
+// == Background == //        
+function drawSky() {
+    if (!useCanvasSky) return;
+    if (!bgImg.complete) return;
+
+    const x = skyOffset % width;
+    ctx.drawImage(bgImg, x, 0, width, height);
+    ctx.drawImage(bgImg, x + width, 0, width, height);
+}
+
+// == Dust In The Ground == //
+const MAX_DUST = 120;
+
+function drawDust() {
+const now = performance.now();
+
+for (const p of dustParticles) {
+const t = (now - p.start) / p.life;
+const alpha = Math.max(0, 1 - t);
+const size = p.r;
+ctx.save();
+              // 🔥 Glow / depth
+        ctx.shadowColor = "rgba(0,0,0,0.35)";
+        ctx.shadowBlur = 6 * visualScale;
+
+        ctx.globalAlpha = Math.min(1, alpha * 1.2);
+        ctx.fillStyle = p.color;
+
+        ctx.beginPath();
+        ctx.ellipse(p.x, p.y, size * 1.2, size * 0.6, 0, 0, Math.PI * 2);
+        ctx.ellipse(p.x - size * 0.6, p.y + size * 0.2, size * 0.9, size * 0.45, 0, 0, Math.PI * 2);
+        ctx.ellipse(p.x + size * 0.6, p.y + size * 0.15, size * 0.95, size * 0.55, 0, 0, Math.PI * 2);
+        ctx.ellipse(
+            p.x,
+            p.y,
+            size * (1.1 + Math.sin(p.shapeOffset) * 0.15),
+            size * 0.6,
+            0,
+            0,
+            Math.PI * 2
+        );
+        ctx.fill();
+        ctx.restore(); // resets shadow automatically
+    }
+}                   
+
+// For Running Ground Img //
+function drawGround() {
+    const y = getGroundY();
+
+    if (groundImg && groundImg.complete && groundImg.naturalWidth) {
+        ctx.drawImage(groundImg, groundOffset, y, width, groundHeight);
+        ctx.drawImage(groundImg, groundOffset + width, y, width, groundHeight);
+    } else {
+        ctx.fillStyle = "#2b7a2b";
+        ctx.fillRect(groundOffset, y, width, groundHeight);
+        ctx.fillRect(groundOffset + width, y, width, groundHeight);
+    }
+}
+
+// Player //
+function drawPlayer() {
+    if (playerImg.complete && playerImg.naturalWidth > 0) {
+        ctx.save(); // 1. Save current settings
+        
+        // 2. Move the "pen" to the right edge of the player
+        ctx.translate(player.x + player.w, player.y);
+        
+        // 3. Flip the canvas horizontally
+        ctx.scale(-1, 1);
+        
+        // 4. Draw the image (at 0,0 relative to the flip)
+        ctx.drawImage(playerImg, 0, 0, player.w, player.h);
+        
+        ctx.restore(); // 5. Restore settings so nothing else flips
+    } else {
+        // 🔥 TEMP PLACEHOLDER
+        ctx.fillStyle = "#ffcc00";
+        ctx.fillRect(player.x, player.y, player.w, player.h);
+    }
+}
+
+// Obstacle // 
+function drawObstacles() {
+      for (const ob of obstacles) {
+          if (obstacleImg && obstacleImg.complete && obstacleImg.naturalWidth) {
+              ctx.drawImage(obstacleImg, ob.x, ob.y, ob.w, ob.h);
+          } else {
+              ctx.fillStyle = "#8b5e3c";
+              ctx.fillRect(ob.x, ob.y, ob.w, ob.h);
+          }
+      }
+  }
+
+// Bullets //
+function drawBullets() {
+      for (const b of bullets) {
+          if (bulletImg && bulletImg.complete && bulletImg.naturalWidth) {
+              ctx.drawImage(bulletImg, b.x, b.y, b.w, b.h);
+          } else {
+              ctx.fillStyle = "#fff";
+              ctx.fillRect(b.x, b.y, b.w, b.h);
+          }
+      }
+  }
+
+// Modi Boss //
+function drawBoss() {
+    if (!boss) return;
+
+    if (bossImg && bossImg.complete && bossImg.naturalWidth) {
+        ctx.save(); // Save current canvas state
+
+        if (boss.vx > 0) {
+            // == MOVING RIGHT (Flip Image) ==
+            // 1. Move the "pen" to the right edge of the boss
+            ctx.translate(boss.x + boss.w, boss.y);
+            // 2. Flip the scale horizontally
+            ctx.scale(-1, 1);
+            // 3. Draw at 0,0 (relative to the new flipped position)
+            ctx.drawImage(bossImg, 0, 0, boss.w, boss.h);
+        } else {
+            // == MOVING LEFT (Normal) ==
+            ctx.drawImage(bossImg, boss.x, boss.y, boss.w, boss.h);
+        }
+
+        ctx.restore(); // Restore canvas state so nothing else flips
+    } else {
+        // Red box fallback if image hasn't loaded
+        ctx.fillStyle = "#7a2230";
+        ctx.fillRect(boss.x, boss.y, boss.w, boss.h);
+    }
+}
+
+// Explosion //
+function drawExplosions() {
+      for (const ex of explosions) {
+          const alpha = 1 - Math.min(1, ex.r / ex.maxR);
+          ctx.beginPath();
+          ctx.fillStyle = `rgba(255,200,80,${0.6 * alpha})`;
+          ctx.arc(ex.x, ex.y, ex.r, 0, Math.PI * 2);
+          ctx.fill();
+      }
+  }
+
+          // === SPAWN Function === //
+          
+// Dust Spawning //          
+function spawnDust(x, y) {
+if (dustParticles.length >= MAX_DUST) return;
+const angle = (Math.random() * 0.6) - 0.3;
+const r = 130 + Math.random() * 30;
+const g = 70 + Math.random() * 25;
+const b = 40 + Math.random() * 20;
+
+    let vx;
+    let strength = 1;
+
+    if (freezeGround) {
+        strength = 1.6;
+        vx = (Math.random() - 0.5) * 2.4;
+    } else {
+        vx = (-1.5 - Math.random() * 1.2) + Math.cos(angle) * 0.4;
+    }
+
+    dustParticles.push({
+        x,
+        y: y - 4 * visualScale,
+        r: (3 + Math.random() * 7) * visualScale * strength,
+        vx,
+        vy: (-0.8 - Math.random() * 0.6),
+        life: (450 + Math.random() * 120) * strength,
+        start: performance.now(),
+        shapeOffset: Math.random() * Math.PI * 2,
+        shrink: 0.96 + Math.random() * 0.02,
+        color: `rgba(${r}, ${g}, ${b}, 1)`
+    });
+}
+
+// Boss Spawning //
+function spawnBoss() {
+    const size = sizeFromImage(bossImg, 90);
+
+    const maxW = MAX_BOSS_WIDTH * visualScale;
+    const w = Math.min(size.w, maxW);
+    const h = size.h;
+
+    const targetX = Math.min(
+        width - player.w - 140 * visualScale,
+        player.x + 290 * visualScale
+    );
+
+    boss = {
+        x: width + 50,
+        y: getGroundY() - h,
+        w,
+        h,
+        vx: -2,
+        hp: 200,
+        maxHp: 200,
+        targetX,
+        hasReachedLeft: false
+    };
+
+    bossHpBar.style.display = 'block';
+    updateBossHpBar();
+
+    let steps = 50;
+    const shiftAmt = (targetX - player.x) / steps;
+    const shiftInterval = setInterval(() => {
+        player.x += shiftAmt;
+        steps--;
+        if (steps <= 0) clearInterval(shiftInterval);
+    }, 16);
+}
+
+// Obstacle Spawning //
+function spawnObstacle() {
+    if (!allowObstacles) return;
+
+    // 1. SIZE: Base height is now 100 minimum, plus random extra
+    const baseH = 60 + Math.random() * 30; 
+    const size = sizeFromImage(obstacleImg, baseH);
+
+    const maxW = MAX_OBSTACLE_WIDTH * visualScale;
+    const w = Math.min(size.w, maxW);
+    const h = size.h;   
+
+    obstacles.push({
+        x: width + w + 10,
+        y: getGroundY() - h ,
+        w,
+        h
+    });
+
+    gameSpeed = Math.min(14, gameSpeed + 0.1);
+    spawnInterval = Math.max(500, spawnInterval - 0.5);
+}
+
+// Player Bullets Spawning //  
+function spawnPlayerBullet() {
+      if (gameOver) return;
+      bullets.push({
+          x: player.x + player.w,
+          y: player.y + player.h / 2 - 12,
+          w: 50 * visualScale,
+          h: 50 * visualScale,
+          vx: 7
+      });
+}
+ 
+// Explosion //
+function spawnExplosion(x, y, maxR = 60, dur = 700) {
+      explosions.push({ x, y, start: performance.now(), duration: dur, maxR, r: 0 });
+}
+
+       // === All Update Functions === //  
+
+// === Dust Update === //    
+function updateDust(delta) {
+const dt = delta / 16; // normalize to 60fps
+
+    for (let i = dustParticles.length - 1; i >= 0; i--) {
+        const p = dustParticles[i];
+
+        const age = performance.now() - p.start;
+        if (age >= p.life || p.r < 0.5) {
+            dustParticles.splice(i, 1);
+            continue;
+            }
+            p.x += p.vx * dt;
+            p.y += p.vy * dt;
+            p.vy += 0.06 * dt;  // gravity scaled
+            p.r *= p.shrink;
+    }
+}
+
+// === Player Update === //
+function updatePlayer(delta) {
+      const dt = Math.min(delta, 32) / 16;
+      player.vy += player.gravity * dt;
+      player.y += player.vy * dt;
+
+      const ground = getGroundY();
+      if (player.y + player.h >= ground) {
+          if (!player.grounded) {
+              const dustCount = freezeGround ? 8 : 5;
+for (let i = 0; i < dustCount; i++) {
+    spawnDust(player.x + player.w * 0.5, ground);
+              }
+          }
+          player.y = ground - player.h;
+          player.vy = 0;
+          player.grounded = true;
+      } else {
+          player.grounded = false;
+      }
+}
+
+// === Bullets Update === //
+function updateBullets(delta) {
+      const dt = delta / 16;
+      for (let i = bullets.length - 1; i >= 0; i--) {
+          const b = bullets[i];
+          b.x += b.vx * dt;
+
+          if (boss && collides(b, boss)) {
+              boss.hp -= 8;
+              spawnExplosion(b.x, b.y, 40, 350);
+              updateBossHpBar();
+              bullets.splice(i, 1);
+              if (boss.hp <= 0) handleBossDefeat();
+              continue;
+          }
+          if (b.x > width + 100) bullets.splice(i, 1);
+      }
+}
+
+// === Explosions Update === //
+function updateExplosions(now) {
+      for (let i = explosions.length - 1; i >= 0; i--) {
+          const ex = explosions[i];
+          const t = (now - ex.start) / ex.duration;
+          if (t >= 1) {
+              explosions.splice(i, 1);
+              continue;
+          }
+          ex.r = Math.max(0, ex.maxR * t);
+      }
+}
+
+// === Obstacles Update === //
+function updateObstacles(delta) {
+    if (paused) return;
+const move = gameSpeed * (delta / 16);
+    for (let i = obstacles.length - 1; i >= 0; i--) {
+        obstacles[i].x -= move;
+
+        if (obstacles[i].x + obstacles[i].w < -50) {
+            obstacles.splice(i, 1);
+        }
+    }
+}
+
+// === Boss Update === //
+function updateBoss(delta) {
+    if (!boss) return;
+    const dt = delta / 16;
+
+    // ===========================================
+    // 1. BOSS COLLISION LOGIC (Trimmed Hitbox)
+    // ===========================================
+    
+    // We ignore 20% of the empty space on Left/Right
+    const bossPadX = boss.w * 0.20; 
+    // We ignore 10% of the empty space on Top
+    const bossPadY = boss.h * 0.10;
+
+    const bossHitbox = {
+        x: boss.x + bossPadX,            // Move box IN from left
+        y: boss.y + bossPadY,            // Move box DOWN from top
+        w: boss.w - (bossPadX * 2),      // Shrink width (Left + Right)
+        h: boss.h - bossPadY             // Shrink height (Top only)
+    };
+
+    // Shrink Player Hitbox slightly too (for fairness)
+    const plPadX = player.w * 0.15;
+    const plPadY = player.h * 0.10;
+
+    const playerHitbox = {
+        x: player.x + plPadX,
+        y: player.y + plPadY,
+        w: player.w - (plPadX * 2),
+        h: player.h - plPadY
+    };
+
+    // Check if the two "Inner Boxes" are touching
+    if (collides(playerHitbox, bossHitbox)) {
+        safePlay(audio3);
+        safeVibrate([200, 60, 200]);
+        AUDIO_BOSS_WINS();
+        endGame("U Can't Ever Defeat Modi Even In Game Also");
+        return;
+    }
+
+    // ===========================================
+    // 2. BOSS MOVEMENT LOGIC
+    // ===========================================
+
+    // --- ENTRY PHASE --- //
+    if (!freezeGround) {
+        boss.x += boss.vx * dt;
+
+        if (boss.x <= boss.targetX) {
+            boss.x = boss.targetX;
+            freezeGround = true;
+            boss.vx = -2;
+        }
+        return;
+    }
+    // ---- FIRST LEFT SWEEP ----
+    if (!boss.hasReachedLeft) {
+        boss.x += boss.vx * dt;
+
+        if (boss.x <= 60) {
+            boss.x = 60;
+            boss.hasReachedLeft = true;
+            boss.vx = 2;
+        }
+        return;
+    }        
+    // ---- NORMAL PATROL (LEFT ↔ RIGHT) ----
+    boss.x += boss.vx * dt;
+
+    if (boss.x <= 60) {
+        boss.x = 60;
+        boss.vx = Math.abs(boss.vx);
+    }
+    if (boss.x + boss.w >= width - 60) {
+        boss.x = width - boss.w - 60;
+        boss.vx = -Math.abs(boss.vx);
+    }
+}
+
+// Bullets Auto Fire //
+function autoFire(delta) {
+      if (gameOver) return;
+      fireTimer += delta;
+      if ((isPreBossFire || inBossPhase) && fireTimer >= FIRE_INTERVAL) {
+          fireTimer = 0;
+          spawnPlayerBullet();
+      }
+  }
+
+        // ====== UI STATE SYNC ====== //
+
+// For Updating Score //
+function updateScoreDisplay() {
+      scoreEl.textContent = `Score: ${Math.floor(score)}`;
+}
+
+// For Checking Obstacle Collision //
+function checkObstacleCollisions() {
+      for (const ob of obstacles) {
+          if (!inBossPhase && collides(ob, player)) {
+              safePlay(audio3);
+              safeVibrate([120, 80, 120]);
+              rapidFadeOut(audio1);
+              endGame(`Game Over — Score: ${Math.floor(score)}`);
+              return;
+      }
+   }
+}
+// For Updating Boss Hp //
+function updateBossHpBar() {
+      if (!boss) return;
+      const pct = Math.max(0, boss.hp / boss.maxHp);
+      bossHpInner.style.width = (pct * 100) + '%';
+}
+
+       // ==== Game Flow Management ==== //
+       
+// For Adjusting Player jump According to Orientation //
+function applyPlayerPhysics() {
+    if (!player) return;
+
+    const isLandscape = width > height;
+
+    // ---- NORMAL GAMEPLAY PHYSICS ---- //
+    let jump, gravity;
+
+    if (!inBossPhase) {
+        const cfg = isLandscape ? PHYSICS.landscape : PHYSICS.portrait;
+        jump = cfg.jump;
+        gravity = cfg.gravity;
+    }
+
+    // ---- BOSS PHASE PHYSICS ---- //
+    else {
+        const bossCfg = isLandscape
+            ? PHYSICS.boss.landscape
+            : PHYSICS.boss.portrait;
+
+        jump = bossCfg.jump;
+        gravity = bossCfg.gravity;
+    }
+
+    // ---- APPLY WITH SCALE ---- //
+    player.jumpPower = jump * visualScale;
+    player.gravity   = gravity * visualScale;
+}
+
+// Resizing Player Logic
+function resize() {
+    const oldWidth = width;
+    const oldHeight = height;
+
+    width  = window.innerWidth  || 360;
+    height = window.innerHeight || 640;
+
+    deviceRatio = Math.max(1, window.devicePixelRatio || 1);
+
+    canvas.style.width = width + "px";
+    canvas.style.height = height + "px";
+    canvas.width = Math.floor(width * deviceRatio);
+    canvas.height = Math.floor(height * deviceRatio);
+    ctx.setTransform(deviceRatio, 0, 0, deviceRatio, 0, 0);
+ctx.imageSmoothingEnabled = true;
+ctx.imageSmoothingQuality = "high";
+
+const prevVisualScale = visualScale;
+const calcScale = Math.min(width, Math.max(560, height)) / 900;
+visualScale = Math.max(0.4, calcScale); // 🔥 FLOOR (CRITICAL)
+lastVisualScale = visualScale;
+
+    const isLandscape = width > height;
+const cfg = isLandscape ? PHYSICS.landscape : PHYSICS.portrait;
+
+groundHeight = Math.round(
+    height * 0.22 * cfg.groundScale
+);
+
+        // ---- POSITION RATIOS  ---- // 
+    const rx = width / oldWidth;
+    const ry = height / oldHeight;
+
+          /* ------- PLAYER ------- */
+    if (player) {
+        // position → canvas ratio
+        player.x *= rx;
+        player.y *= ry;
+
+        const size = sizeFromImage(playerImg, 75);
+player.w = size.w;
+player.h = size.h;
+        applyPlayerPhysics();
+        const gY = getGroundY();
+        if (player.y + player.h > gY) {
+            player.y = gY - player.h;
+            player.vy = 0;
+            player.grounded = true;
+        }
+    }
+    
+          /* ----- OBSTACLES ----- */
+    
+for (let ob of obstacles) {
+    const pushDown = 25 * visualScale; 
+    ob.y = getGroundY() - ob.h; 
+
+    ob.x *= rx;
+
+    ob.h *= (visualScale / prevVisualScale);
+
+    if (obstacleImg.complete && obstacleImg.naturalHeight > 0) {
+        const ratio = obstacleImg.naturalWidth / obstacleImg.naturalHeight;
+        const maxW = MAX_OBSTACLE_WIDTH * visualScale;
+        ob.w = Math.min(ob.h * ratio, maxW);
+    }
+
+    ob.y = getGroundY() - ob.h;
+}   
+ 
+/* ----- BOSS (RESIZE FIX) ----- */
+if (boss) {
+    boss.x *= rx;
+    if (boss.targetX !== undefined) boss.targetX *= rx;
+
+    const size = sizeFromImage(bossImg, 90);
+    const maxW = MAX_BOSS_WIDTH * visualScale;
+
+    boss.w = Math.min(size.w, maxW);
+    boss.h = size.h;
+
+    boss.y = getGroundY() - boss.h;
+
+    boss.x = Math.max(60, Math.min(boss.x, width - boss.w - 60));
+}
+}
+// expose controlled game API
+window.__GAME_API__ = window.__GAME_API__ || {};
+window.__GAME_API__.resize = resize;
+
+// Init ( for restarting) //
+function init(fullReset = true) {
+    cancelJumpHint();
+    useCanvasSky = true;
+    document.body.style.backgroundImage = "";
+      resize();
+      const isLandscape = width > height;
+      const cfg = isLandscape ? PHYSICS.landscape : PHYSICS.portrait;
+
+const size = sizeFromImage(playerImg, 75);
+
+player = {
+    x: 90 * visualScale,
+    y: getGroundY() - size.h,
+    w: size.w,
+    h: size.h,
+    vy: 0,
+    gravity: cfg.gravity * visualScale,
+    jumpPower: cfg.jump * visualScale,
+    grounded: true
+};
+applyPlayerPhysics();
+      
+      obstacles = [];
+      bullets = [];
+      explosions = [];
+      dustParticles = [];
+      spawnTimer = 0;
+      spawnInterval = 1300;
+      gameSpeed = 4;
+      fireTimer = 0;
+      isPreBossFire = false;
+      score = 0;
+      groundOffset= 0;
+      freezeGround = false;
+groundSlowFactor = 1;
+      running = false;
+      paused = false;
+      started = false;
+      userGestureDone = false;
+      boss = null;
+      bossIntro = false;
+      inBossPhase = false;
+      allowObstacles = true;
+      gameOver = false;
+
+      overlay.textContent = "Tap / Click / Press Space to start";
+      overlay.style.display = "block";
+      pauseMenu.style.display = "none";
+      restartBtn.style.display = "none";
+      exitBtn.style.display = "none";
+      bossHpBar.style.display = "none";
+      bossHpInner.style.width = "100%";
+      pauseBtn.style.display = "block";
+      blastOverlay.style.display = "none";
+      blastOverlay.style.opacity = "0";
+      scoreEl.style.display = "block";
+
+      updateScoreDisplay();
+
+      if (!rafId) {
+    lastTime = performance.now();
+    rafId = requestAnimationFrame(loop);
+}
+}
+
+// Starting BOSS Entry //
+function startBossSequence() {
+      if (bossIntro || inBossPhase || gameOver) return;
+
+      bossIntro = true;
+      allowObstacles = false;
+      isPreBossFire = true;
+      spawnTimer = Infinity;
+
+      AUDIO_BOSS_WARNING();
+
+      overlay.textContent = "PM Narendra Modi Is Coming";
+      overlay.style.display = "block";
+
+      setTimeout(() => {
+          function waitUntilClear() {
+              if (gameOver) return;
+
+              if (obstacles.length === 0) {
+                  if (gameOver) return;
+
+                  bossIntro = false;
+                  isPreBossFire = false;
+                  inBossPhase = true;
+
+                  spawnBoss();
+                  applyPlayerPhysics();
+                  overlay.style.display = "none";
+                  AUDIO_BOSS_FIGHT();
+              } else {
+                  requestAnimationFrame(waitUntilClear);
+              }
+          }
+
+          requestAnimationFrame(waitUntilClear);
+      }, 2000);
+}
+
+// When Boss Gets Defeated //
+function handleBossDefeat() {
+      AUDIO_CHARACTER_WINS();
+      safePlay(audio7);
+      overlay.style.display = "none";
+
+      running = false;
+      gameOver = true;
+      inBossPhase = false;
+applyPlayerPhysics();
+      scoreEl.style.display = 'none';
+      bossHpBar.style.display = 'none';
+      bossHpInner.style.display = 'none';
+      pauseBtn.style.display = 'none';
+
+      boss = null;
+
+      overlay.style.whiteSpace = "normal";
+      overlay.textContent = "You Make Didi As The New PM OF India";
+      overlay.style.display = "block";
+
+      setTimeout(() => {
+          overlay.style.background = "rgba(0,0,0,0.92)";
+          overlay.style.color = "#fffce8";
+          overlay.style.textShadow = "0 0 10px rgba(255,200,80,1), 0 0 22px rgba(255,120,0,1)";
+          overlay.style.whiteSpace = "normal";
+          overlay.style.fontWeight = "900";
+          overlay.style.letterSpacing = "1px";
+          overlay.style.border = "2px solid rgba(255,120,0,1)";
+          overlay.style.zIndex = "999999999999";
+          overlay.style.boxShadow = "0 0 20px rgba(255,140,0,1)";
+          overlay.textContent = "A Terror Attack Taken Place";
+          overlay.style.display = "block";
+          
+          AUDIO_BLAST_START();
+          safeVibrate([
+              320, 70,
+              320, 70,
+              420, 110,
+              200
+          ]);
+
+          document.body.classList.add("shake-screen");
+          setTimeout(() => {
+              document.body.classList.remove("shake-screen");
+          }, 400);
+
+          blastOverlay.style.display = 'block';
+          requestAnimationFrame(() => {
+              blastOverlay.style.opacity = '1';
+          });
+useCanvasSky = false;
+freezeCanvasAfterBlast = true;
+ctx.clearRect(0, 0, width, height);
+drawGround();
+drawPlayer();
+
+// 🔥 LOCK FINAL SKY ON DOM
+document.body.style.backgroundImage = 'url("background1.webp")';
+          setTimeout(() => {
+              blastOverlay.style.opacity = '0';
+              overlay.style.display = "none";
+
+              setTimeout(() => {
+                  blastOverlay.style.display = 'none';
+
+                  overlay.style.display = "block";
+                  overlay.style.background = "rgba(0,0,0,0.65)";
+                  overlay.style.color = "#fff";
+                  overlay.style.textShadow = "none";
+                  overlay.style.border = "none";
+                  overlay.style.boxShadow = "none";
+                  overlay.style.letterSpacing = "0px";
+                  overlay.style.fontWeight = "600";
+                  overlay.style.zIndex = "999";
+                  overlay.textContent = "Didi's Vote Bank Has Destroyed India";
+
+                  restartBtn.style.display = 'block';
+                  exitBtn.style.display = 'block';
+                  AUDIO_AFTER_BLAST_MESSAGE();
+              }, 200);
+          }, 3000);
+      }, 13000);
+}
+
+// When Game Ends //
+function endGame(message) {
+    cancelJumpHint(); // 🔥 INSTANT OVERRIDE
+
+    running = false;
+    gameOver = true;
+    inBossPhase = false;
+    applyPlayerPhysics();
+    bossIntro = false;
+    allowObstacles = false;
+    isPreBossFire = false;
+
+    resetOverlayStyle(); // restore original look
+
+    overlay.textContent = message;
+    overlay.style.display = 'block';
+    restartBtn.style.display = 'block';
+    exitBtn.style.display = 'block';
+    pauseBtn.style.display = 'none';
+}
+
+// Before and Afer Game Pause //
+function togglePause(show) {
+    if (gameOver) return;
+    paused = show;
+    pauseMenu.style.display = show ? "block" : "none";
+    if (show) {
+        pauseAllAudio();
+        running = false;
+        overlay.style.display= "none";
+        cancelJumpHint(false);
+        return;
+    }
+// After Game RESUME //
+    paused = false;
+    running = true;
+    lastTime = performance.now();
+    resumeGameAudio();
+    if (hintRemaining > 0 && !gameOver) {
+    showJumpHint();
+    }
+    if (!rafId) {
+        rafId = requestAnimationFrame(loop);
+    }
+}
+
+      // ------- Player Action -------- //
+// Jump //
+function jump() {
+      if (!running || paused || gameOver) return;
+      if (player.grounded) {
+          player.vy = -player.jumpPower;
+          player.grounded = false;
+          safePlay(audio2);
+      }
+}
+
+     /* ---------- MAIN LOOP ----------- */
+     
+// Update Game //
+function update(now) {
+
+      const delta = now - lastTime;
+      lastTime = now;
+
+      if (
+          canvas.width !== Math.floor(width * deviceRatio) ||
+          canvas.height !== Math.floor(height * deviceRatio)
+      ) {
+          canvas.width = Math.floor(width * deviceRatio);
+          canvas.height = Math.floor(height * deviceRatio);
+          ctx.setTransform(deviceRatio, 0, 0, deviceRatio, 0, 0);
+      }
+// ---- SKY PARALLAX (slow & smooth) ----
+const SKY_TARGET_SCORE = 250;
+
+if (!gameOver && score < SKY_TARGET_SCORE) {
+    const progress = score / SKY_TARGET_SCORE; // 0 → 1
+    skyOffset = -progress * width;             // exactly one full cycle
+}
+
+
+drawSky();
+
+// ---- Ground scrolling (smooth stop) ----
+if (running && !paused && !gameOver) {
+
+    if (freezeGround) {
+        // ease out ground speed
+        groundSlowFactor *= 0.92;
+        if (groundSlowFactor < 0.02) {
+            groundSlowFactor = 0;
+        }
+    }
+
+    const speed = gameSpeed * groundSlowFactor;
+
+    if (speed > 0) {
+        groundOffset -= speed * (delta / 16);
+
+        if (groundOffset <= -width) {
+            groundOffset = 0;
+        }
+    }
+}
+drawGround();
+
+      if (running && !paused && !gameOver) {
+          if (allowObstacles) {
+              spawnTimer += delta;
+              const interval = Math.max(700, spawnInterval - gameSpeed * 25);
+              if (spawnTimer > interval + Math.random() * 300) {
+                  spawnTimer = 0;
+                  spawnObstacle();
+              }
+          }
+
+          updatePlayer(delta);
+          updateObstacles(delta);
+          updateBullets(delta);
+          updateExplosions(performance.now());
+          updateDust(delta);
+          autoFire(delta);
+
+          if (!inBossPhase && Math.floor(score) >= BOSS_SCORE_THRESHOLD) {
+              startBossSequence();
+          }
+
+          if (inBossPhase) {
+              updateBoss(delta);
+          }
+
+          if (!inBossPhase) {
+              checkObstacleCollisions();
+          }
+
+          score += delta * 0.01;
+          updateScoreDisplay();
+      } else {
+    drawPlayer();
+    updateExplosions(performance.now());
+    updateDust(delta);
+    return;
+}
+      drawDust();
+      drawObstacles();
+      drawBullets();
+      drawPlayer();
+      drawBoss();
+      drawExplosions();
+}
+
+// Loop //
+function loop(now) {
+    if (!running && !paused && gameOver) {
+        rafId = null;
+        return;
+    }
+
+    rafId = requestAnimationFrame(loop);
+    update(now);
+}
+
+    // == Hint system / Overlay System == //
+ 
+ // Showing Hint Text //
+function showJumpHint() {
+    cancelJumpHint(false); // do NOT reset remaining time
+
+    hintActive = true;
+    hintStartTime = performance.now();
+
+    overlay.textContent = "Touch / Click to Jump";
+    overlay.style.display = "block";
+
+    overlay.style.background = "rgba(0,0,0,0)";
+    overlay.style.color = "rgba(0,0,0,0.8)";
+    overlay.style.fontWeight = "800";
+    overlay.style.textShadow = "0 0 10px rgba(255,255,255,0.5)";
+    overlay.style.pointerEvents = "none";
+
+    overlay.style.transition = "opacity 0.4s ease";
+    overlay.style.opacity = "1";
+
+    hintTimeout = setTimeout(() => {
+        overlay.style.opacity = "0";
+
+        hintFadeTimeout = setTimeout(() => {
+            cancelJumpHint(true); // full reset
+        }, 600);
+
+    }, hintRemaining);
+}
+    
+// Hint Text cancel Function //
+function cancelJumpHint(reset = true) {
+    if (!hintActive) return;
+
+    clearTimeout(hintTimeout);
+    clearTimeout(hintFadeTimeout);
+
+    // 🔥 preserve remaining time if pausing
+    if (!reset) {
+        const elapsed = performance.now() - hintStartTime;
+        hintRemaining = Math.max(0, hintRemaining - elapsed);
+    } else {
+        hintRemaining = 5000; // reset fully
+    }
+
+    hintTimeout = null;
+    hintFadeTimeout = null;
+    hintActive = false;
+
+    overlay.style.display = "none";
+    overlay.style.opacity = "1";
+    overlay.style.transition = "";
+    overlay.style.pointerEvents = "";
+
+    resetOverlayStyle();
+}
+
+// For Restting the overlay Text //
+function resetOverlayStyle() {
+    overlay.style.background = "";
+    overlay.style.color = "";
+    overlay.style.fontWeight = "";
+    overlay.style.textShadow = "";
+    overlay.style.letterSpacing = "";
+    overlay.style.pointerEvents = "";
+    overlay.style.transition = "";
+    overlay.style.opacity = "1";
+}
+
+          // === Input Handlers === //
+          
+// For Unlocking Audio //
+function unlockAudioOnGesture() {
+    if (audioUnlocked) return;
+    audioUnlocked = true;
+
+    const audios = [audio8, audio9];
+
+    audios.forEach(a => {
+        try {
+            a.volume = 0;
+            a.currentTime = 0;
+
+            const p = a.play();
+            if (p && p.then) {
+                p.then(() => {
+                    a.pause();
+                    a.currentTime = 0;
+                }).catch(() => {});
+            }
+        } catch (e) {}
+    });
+}
+
+// For Starting Gameplay //
+function onUserGestureStart() {
+if(!audioUnlocked){
+    unlockAudioOnGesture();
+    }
+    userGestureDone = true;
+    
+    if (!vibCheckedThisSession) {
+vibCheckedThisSession = true;
+
+// 1. Perform the test
+
+const isSupported = detectAndCacheVibration();
+
+// 2. If it returns FALSE, show popup INSTANTLY
+
+if (!isSupported) {
+ showVibrationPopup();
+togglePause(true);
+} else {
+sessionStorage.setItem(BROWSER_HIDE_KEY,"true");
+}
+              // ---- APK ---- //
+        if (
+            isApp &&
+           !sessionStorage.getItem(APK_HIDE_KEY)
+        ) {
+            showVibrationPopup();
+        }
+    }
+    audio9.volume = 0;
+    safePlay(audio9);
+    audio9.pause();
+    audio9.currentTime = 0;
+    if (!paused && running) {
+    safePlay(audio1);
+}
+if (!started) {
+    started = true;
+    running = true;
+    overlay.style.display = 'none';
+    lastTime = performance.now();
+    AUDIO_START_GAMEPLAY();
+    showJumpHint();
+    return;
+}
+      if (paused) return;
+      if (gameOver) return;
+
+      jump();
+}
+
+function onKeyDown(e) {
+      if (gameOver && e.code === "Space") init(true);
+      if (['Space', 'ArrowUp', 'KeyW'].includes(e.code)) {
+          e.preventDefault();
+          onUserGestureStart();
+          return;
+      }
+      if (e.code === 'KeyP') {
+          if (running) togglePause(!paused);
+      }
+}
+
+let touchStartY = null;
+const SWIPE_MIN_DIST = 20;
+
+  function onTouchStart(e) {
+      if (e.touches && e.touches.length) {
+          touchStartY = e.touches[0].clientY;
+      }
+      onUserGestureStart();
+}
+
+function onTouchMove(e) {
+      if (!touchStartY || !e.touches || !e.touches.length) return;
+      const dy = touchStartY - e.touches[0].clientY;
+      if (dy > SWIPE_MIN_DIST) {
+          jump();
+          touchStartY = null;
+      }
+}
+
+function onTouchEnd() {
+      touchStartY = null;
+}
+  
+  
+    /* ------- UI BUTTON BINDINGS ------- */
+
+pauseBtn.addEventListener('click', () => {
+      if (!started) return;
+      togglePause(!paused);
+});
+
+resumeBtn.addEventListener('click', () => {
+      if (!started) return;
+      togglePause(false);
+});
+
+restartGameBtn.addEventListener('click', () => {
+      stopAllAudio();
+      init(true);
+      showVibrationPopup();
+});
+
+exitGameBtn.addEventListener('click', () => {
+      stopAllAudio();
+      exitGame();
+});
+
+restartBtn.addEventListener('click', () => {
+      AUDIO_RESTART();
+      init(true);
+      showVibrationPopup();
+});
+
+exitBtn.addEventListener('click', () => {
+      stopAllAudio();
+      exitGame();
+});
+  
+// Full Screen Button //
+if (fsBtn) {
+      fsBtn.addEventListener("click", () => {
+          if (!document.fullscreenElement) {
+              document.documentElement.requestFullscreen().catch(() => {});
+              fsBtn.textContent = "⤢";
+          } else {
+              document.exitFullscreen();
+              fsBtn.textContent = "⛶";
+          }
+});
+      
+// Controlling exit behaviour of the Game //
+function exitGame() {
+      stopAllAudio();
+
+      if (isBrowser) {
+          // Web: clear login and go back
+          localStorage.removeItem("login");
+          location.replace("index.html");
+          return;
+          }
+
+      // APK: no real close from JS → go back to main page
+      location.replace("index.html");
+  }
+if (isBrowser) {
+    history.pushState({ panel: false }, "");
+
+    window.addEventListener("popstate", () => {
+        if (panelOpened) {
+            closeSlidePanel();
+            history.pushState({ panel: false }, "");
+        } else {
+            localStorage.removeItem("login");
+            location.replace("index.html");
+        }
+    });
+}
+  
+    // ======= Event Listeners ========== //
+    
+canvas.addEventListener('pointerdown', onUserGestureStart);
+canvas.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      onTouchStart(e);
+  }, { passive: false });
+
+  canvas.addEventListener('touchmove', (e) => {
+      onTouchMove(e);
+  }, { passive: true });
+
+  canvas.addEventListener('touchend', onTouchEnd, { passive: true });
+  window.addEventListener('keydown', onKeyDown);
+
+  window.addEventListener("resize", () => {
+    resize(); // ALWAYS resize first
+
+    if (started && !gameOver) {
+        paused = true;                 
+        running = false;               
+        pauseMenu.style.display = "block";
+        overlay.style.display = "none";
+
+        cancelJumpHint(false);          // preserve hint time
+        pauseAllAudio();
+        lastTime = performance.now();
+    }
+}); 
+ window.addEventListener('focus', () => {
+      lastTime = performance.now();
+  });
+  
+document.addEventListener("fullscreenchange", () => {
+          fsBtn.textContent = document.fullscreenElement ? "⤢" : "⛶";
+      });
+  }
+
+document.addEventListener("visibilitychange", () => {
+    if (document.hidden) markHidden();
+});
+window.addEventListener("blur", markHidden);
+window.addEventListener("pagehide", markHidden);
+
+// ---- Resume / reload detection ----
+window.addEventListener("focus", checkAutoExit);
+window.addEventListener("pageshow", checkAutoExit);
+document.addEventListener("DOMContentLoaded", checkAutoExit);
+
+/* ---- ASSET PRELOAD THEN INIT ---- */
+
+  const assets = [
+  // 🔥 IMAGES (NO TIMEOUTS)
+  trackImage(bgImg),
+  trackImage(groundImg),
+  trackImage(playerImg),
+  trackImage(obstacleImg),
+  trackImage(bossImg),
+  trackImage(bulletImg),
+
+  // 🔊 AUDIO (timeouts OK)
+  new Promise(r => { audio1.oncanplaythrough = r; audio1.onerror = r; setTimeout(r, 1500); }),
+  new Promise(r => { audio2.oncanplaythrough = r; audio2.onerror = r; setTimeout(r, 1500); }),
+  new Promise(r => { audio3.oncanplaythrough = r; audio3.onerror = r; setTimeout(r, 1500); }),
+  new Promise(r => { audio4.oncanplaythrough = r; audio4.onerror = r; setTimeout(r, 1500); }),
+  new Promise(r => { audio5.oncanplaythrough = r; audio5.onerror = r; setTimeout(r, 1500); }),
+  new Promise(r => { audio6.oncanplaythrough = r; audio6.onerror = r; setTimeout(r, 1500); }),
+  new Promise(r => { audio7.oncanplaythrough = r; audio7.onerror = r; setTimeout(r, 1500); }),
+  new Promise(r => { audio8.oncanplaythrough = r; audio8.onerror = r; setTimeout(r, 1500); }),
+  new Promise(r => { audio9.oncanplaythrough = r; audio9.onerror = r; setTimeout(r, 1500); })
+];
+
+  Promise.all(assets).then(() => {
+
+    requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+
+            init(true);
+
+            requestAnimationFrame((t) => {
+                lastTime = t;
+                update(t);
+            });
+
+            if (!rafId) {
+                rafId = requestAnimationFrame(loop);
+            }
+            if (window.__SHOW_VIB_POPUP__) {
+                setTimeout(showVibrationPopup, 100);
+                window.__SHOW_VIB_POPUP__ = false;
+            }
+        });
+    });        
+}); 
+    
+     /* ---- INSTAGRAM HEADER CLICK ---- */
+
+  const INSTAGRAM_USERNAME = "#";
+  const INSTAGRAM_URL = `#`;
+
+  if (topHeader) {
+      topHeader.addEventListener("click", () => {
+          const win = window.open(INSTAGRAM_URL, "_blank");
+          if (!win) location.href = INSTAGRAM_URL;
+      });
+  }
+  
+ /* === AUTO EXIT AFTER 2 MINUTES HIDDEN === */
+ 
+          // ===== AUTO EXIT ===== //
+// If Visited Internal page Marked it //
+function goToContact() {
+    sessionStorage.setItem(INTERNAL_NAV_KEY, "contact");
+    window.location.href = "contact.html";
+}
+
+const AUTO_EXIT_DELAY = 2 * 60 * 1000; // 2 minutes
+const DIDI_HIDDEN_KEY = "__DIDI_HIDDEN_AT__";
+const INTERNAL_NAV_KEY = "INTERNAL_NAV";
+
+// Marking The Time of Being Hidden //
+function markHidden() {
+    // ❌ Ignore internal navigation
+    if (sessionStorage.getItem(INTERNAL_NAV_KEY) === "contact") return;
+    if (!localStorage.getItem(DIDI_HIDDEN_KEY)) {
+        localStorage.setItem(DIDI_HIDDEN_KEY, Date.now().toString());
+    }
+
+    stopAllAudio?.();
+
+    if (running && !paused) {
+        paused = true;
+        pauseMenu.style.display = "block";
+    }
+
+    if (panelOpened) {
+        closeSlidePanel();
+    }
+}
+
+// Time Checking //
+function checkAutoExit() {
+    const hiddenAt = Number(localStorage.getItem(DIDI_HIDDEN_KEY));
+    if (!hiddenAt) return;
+
+    localStorage.removeItem(DIDI_HIDDEN_KEY);
+    sessionStorage.removeItem(INTERNAL_NAV_KEY); // restart semantics
+
+    if (Date.now() - hiddenAt >= AUTO_EXIT_DELAY) {
+    sessionStorage.removeItem(APK_HIDE_KEY);
+    sessionStorage.removeItem(VIB_CACHE_KEY);
+        stopAllAudio?.();
+
+        if (isBrowser) {
+            localStorage.removeItem("login");
+            location.replace("index.html");
+        } else {
+            // WebView / APK
+            location.replace("didi.html");
+        }
+    } else {
+        lastTime = performance.now();
+    }
+}
+})(); // end IIFE
